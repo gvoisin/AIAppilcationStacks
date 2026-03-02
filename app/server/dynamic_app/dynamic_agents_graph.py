@@ -88,12 +88,16 @@ class DynamicGraph:
         content = str(message.content)[:self.CONTENT_TRUNCATION_LENGTH]
 
         if hasattr(message, 'tool_calls') and message.tool_calls:
-            tool_name = str(message.tool_calls[0].get('name', ''))
-            tool_args = str(message.tool_calls[0].get('args', ''))
-            timeline_message = f"{agent_name} called tool: {tool_name}"
-            detailed_message = f"Agent {agent_name} called tool: {tool_name} with args {tool_args}"
+            if len(message.tool_calls) == 1:
+                tool_name = str(message.tool_calls[0].get('name', ''))
+                tool_args = str(message.tool_calls[0].get('args', ''))
+                timeline_message = f"{agent_name} called tool: {tool_name}"
+                detailed_message = f"{agent_name} called tool: {tool_name} with args {tool_args}"
+            else:
+                tool_names = [str(tc.get('name', '')) for tc in message.tool_calls]
+                timeline_message = f"{agent_name} called tools: {', '.join(tool_names)}"
+                detailed_message = f"{agent_name} called tools: {', '.join(tool_names)}"
         elif isinstance(message, ToolMessage):
-
             tool_name = str(message.name)
             timeline_message = f"Tool {tool_name} responded"
             detailed_message = f"Tool {tool_name} responded with data:\n{content}"
@@ -109,11 +113,11 @@ class DynamicGraph:
             detailed_message = f"{agent_name} response:\n{content}...\n\nAgent metadata:\n{model_data}"
             return timeline_message, updated_token_count, detailed_message
         elif isinstance(message, HumanMessage):
-            timeline_message = f"Current query: {node_name}"
+            timeline_message = f"{node_name} received query"
             detailed_message = f"Query in process at {node_name}:\n{content}..."
         else:
-            timeline_message = f"Calling node: {node_name}"
-            detailed_message = f"Calling node {node_name} with status: {content}"
+            timeline_message = f"Routing to next step"
+            detailed_message = f"Routing to next step"
 
         return timeline_message, model_token_count, detailed_message
 
@@ -142,6 +146,10 @@ class DynamicGraph:
             # Update node_name from graph state
             state = self._dynamic_ui_graph.get_state(config=config, subgraphs=True)
             node_name = str(state.next[0]) if state.next else "GRAPH"
+
+            # Skip state for graph routing or no named nodes
+            if node_name == "GRAPH" and isinstance(latest_message, AIMessage) or hasattr(latest_message, 'name') and not latest_message.name:
+                continue
 
             if isinstance(latest_message, AIMessage):
                 timeline_message, model_token_count, detailed_message = self._format_message(latest_message, node_name, model_token_count)

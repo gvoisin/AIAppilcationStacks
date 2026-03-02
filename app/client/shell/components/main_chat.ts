@@ -75,7 +75,9 @@ export class ChatModule extends LitElement {
           }];
           this.#pendingResponse = true;
           // Reset status with new query start
-          this.status = [{timestamp: Date.now(), duration: 0, message: "Query sent", type: "sent"}];
+          // this.status = [{timestamp: Date.now(), duration: 0, message: "Query sent", type: "sent"}];
+          console.log("Query sent to LLM")
+          this.status = []
         }
       });
     }
@@ -114,19 +116,19 @@ export class ChatModule extends LitElement {
                 timestamp: Date.now()
               }];
               this.#pendingResponse = false;
-              // Scroll to bottom after adding message
               this.updateComplete.then(() => this.#scrollToBottom());
             }
             
-            // Get final state message (part 1) or current message
-            const statusMessage = isFinal && serverState[1]?.text ? serverState[1].text : serverMessage;
-            this.#addStatusWithDuration(statusMessage, event.kind);
+            // The final message is a copy from the previous message, so final is no use to add.
+            if(!isFinal){
+              this.#addStatusWithDuration(serverMessage, event.kind);
+            }
             
             // Get suggestions (part 2) if available
             if (isFinal && serverState[3]?.text) {
               this.suggestions = serverState[3].text;
             }
-            break; // Use the first text part
+            break;
           }
         }
       }
@@ -141,7 +143,8 @@ export class ChatModule extends LitElement {
       }
     }
     else if (event.kind === 'task') {
-      this.#addStatusWithDuration("Task management event received", event.kind);
+      // this.#addStatusWithDuration("Task management event received", event.kind);
+      console.log("Task management event received")
     }
     else if (event.kind === 'message') {
       this.#addStatusWithDuration("Direct message received", event.kind);

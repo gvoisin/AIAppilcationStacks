@@ -67,9 +67,13 @@ class OCIOutageEnergyLLM:
             final_response_content = latest_update.content
 
             if hasattr(latest_update, 'tool_calls') and latest_update.tool_calls:
-                tool_name = str(latest_update.tool_calls[0].get('name'))
-                tool_args = str(latest_update.tool_calls[0].get('args'))
-                latest_update = f"Model calling tool: {tool_name} with args {tool_args}"
+                if len(latest_update.tool_calls) == 1:
+                    tool_name = str(latest_update.tool_calls[0].get('name'))
+                    tool_args = str(latest_update.tool_calls[0].get('args'))
+                    latest_update = f"Model calling tool: {tool_name} with args {tool_args}"    
+                else:
+                    tool_names = [str(tc.get('name', '')) for tc in latest_update.tool_calls]
+                    latest_update = f"Model called tools: {', '.join(tool_names)}"  
             elif isinstance(latest_update,ToolMessage):
                 tool_name = str(latest_update.name)
                 status_content = str(latest_update.content)
@@ -85,11 +89,11 @@ class OCIOutageEnergyLLM:
                     agent_name: {agent_name},
                     total_tokens_on_call: {str(model_token_count)}
                 """
-                latest_update = f"Agent current response:\n{status_content[:100]}...\n\nAgent metadata:\n{model_data}"
+                latest_update = f"Model responded:\n{status_content[:100]}...\n\nModel metadata:\n{model_data}"
                 final_model_state = latest_update
             else:
                 status_content = str(latest_update.content)
-                latest_update = f"Processing task, current state:\n{status_content[:100]}..."
+                latest_update = f"Model processing:\n{status_content[:100]}..."
 
             # Yield intermediate updates on every attempt
             yield {

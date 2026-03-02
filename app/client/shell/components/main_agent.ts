@@ -326,7 +326,9 @@ export class DynamicModule extends LitElement {
           // Capture the last user question
           this.#lastUserQuestion = sentEvent.message || '';
           // Reset status with new query start
-          this.status = [{ timestamp: Date.now(), duration: 0, message: "Query sent", type: "sent" }];
+          // this.status = [{ timestamp: Date.now(), duration: 0, message: "Query sent", type: "sent" }];
+          console.log("Query sent on agent")
+          this.status = []
           this.#startStopwatch();
         }
       });
@@ -402,7 +404,11 @@ export class DynamicModule extends LitElement {
       if (state == 'failed') {
         this.#addStatusWithDuration("Task failed - An error occurred", event.kind);
       } else {
-        this.#addStatusWithDuration(serverMessage, event.kind);
+        // The final message is a copy from the previous message, so final is no use to add.
+        if(!isFinal){
+          this.#addStatusWithDuration(serverMessage, event.kind);
+        }
+        // this.#addStatusWithDuration(serverMessage, event.kind);
       }
 
       // Calculate elapsed time when final response is received
@@ -412,7 +418,8 @@ export class DynamicModule extends LitElement {
       }
     }
     else if (event.kind === 'task') {
-      this.#addStatusWithDuration("Task management event received", event.kind);
+      // this.#addStatusWithDuration("Task management event received", event.kind);
+      console.log("Task management event received")
     }
     else if (event.kind === 'message') {
       this.#addStatusWithDuration("Direct message received", event.kind);
@@ -427,6 +434,11 @@ export class DynamicModule extends LitElement {
     const now = Date.now();
     const lastStatus = this.status[this.status.length - 1];
     const duration = lastStatus ? (now - lastStatus.timestamp) / 1000 : 0;
+
+    // Filter out duplicate status entries with same message and type
+    if (lastStatus && lastStatus.message === message && lastStatus.type === type) {
+      return;
+    }
 
     this.status = [...this.status, {
       timestamp: now,
