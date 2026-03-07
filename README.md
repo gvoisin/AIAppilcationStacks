@@ -232,7 +232,7 @@ uv run pytest tests/ -v
 a. DB-only queries:
    1. Show me all substations and their capacity in descending order
    2. Find circuits with the highest number of customers served
-   3. List assets that are currently in critical condition (condition_score < 3)
+   3. List assets that are currently in overwatch condition (condition_score < 4)
    4. What are the most common outage cause categories in the last 6 months?
    5. Which work orders are still open and their associated asset types?
 b. RAG-only queries:

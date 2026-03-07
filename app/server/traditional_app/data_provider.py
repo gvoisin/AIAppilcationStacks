@@ -294,13 +294,12 @@ async def get_traditional_industry_messages():
         industry_table.append({
             "key": str(i),
             "valueMap": [
-                {"key": "id", "valueString": industry["name"]},
-                {"key": "location", "valueString": f"Production Index: {industry['production_index']}"},
-                {"key": "status", "valueString": f"Employment: {industry['employment']}"},
-                {"key": "severity", "valueString": f"Growth Rate: {industry['growth_rate']}"},
-                {"key": "startTime", "valueString": f"Output Value: {industry['key_metrics']['output_value']}"},
-                {"key": "estimatedRestoration", "valueString": f"Efficiency Score: {industry['key_metrics']['efficiency_score']}"},
-                {"key": "affectedCustomers", "valueNumber": 0}
+                {"key": "name", "valueString": industry["name"]},
+                {"key": "productionIndex", "valueNumber": industry['production_index']},
+                {"key": "employment", "valueNumber": industry['employment']},
+                {"key": "growthRate", "valueNumber": industry['growth_rate']},
+                {"key": "outputValue", "valueNumber": industry['key_metrics']['output_value']},
+                {"key": "efficiencyScore", "valueNumber": industry['key_metrics']['efficiency_score']}
             ]
         })
 

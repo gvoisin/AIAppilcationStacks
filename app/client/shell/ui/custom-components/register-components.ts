@@ -3,7 +3,7 @@ import { BarGraph } from "./bar-graph.js";
 import { LineGraph } from "./line-graph.js";
 import { MapComponent } from "./map.js";
 import { TimelineComponent } from "./timeline.js";
-import { OutageTable } from "./outage-table.js";
+import { Table } from "./table.js";
 import { KpiCard, KpiCardGroup } from "./kpi-card.js";
 
 export function registerShellComponents() {
@@ -54,15 +54,28 @@ export function registerShellComponents() {
     required: [],
   });
 
-  componentRegistry.register("OutageTable", OutageTable, "outage-table", {
+  componentRegistry.register("Table", Table, "data-table", {
     type: "object",
     properties: {
-      dataPath: { type: "string", description: "Path to array of outage records" },
+      dataPath: { type: "string", description: "Path to array of table records" },
       title: { type: "string", description: "Table title" },
+      columns: {
+        type: "array",
+        description: "Column definitions for the table",
+        items: {
+          type: "object",
+          properties: {
+            header: { type: "string", description: "Column header text" },
+            field: { type: "string", description: "Field name in the data records" },
+            type: { type: "string", enum: ["string", "number", "date", "status", "severity"], description: "Data type for formatting" }
+          },
+          required: ["header", "field", "type"]
+        }
+      },
       showPagination: { type: "boolean", description: "Show pagination controls" },
       pageSize: { type: "number", description: "Number of records per page" },
     },
-    required: ["dataPath"],
+    required: ["dataPath", "columns"],
   });
 
   componentRegistry.register("KpiCard", KpiCard, "kpi-card", {

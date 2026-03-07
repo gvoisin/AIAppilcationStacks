@@ -323,7 +323,21 @@ export class StaticModule extends LitElement {
     return html`
       <div class="table-section">
         <div class="section-title">Outage Details by Location</div>
-        <outage-table .dataPath=${"/outageTable"} .title=${"Outage Details"} .processor=${this.processor} .component=${this}></outage-table>
+        <data-table
+          .dataPath=${"/outageTable"}
+          .title=${"Outage Details"}
+          .columns=${[
+            {header: "Outage ID", field: "id", type: "string"},
+            {header: "Location", field: "location", type: "string"},
+            {header: "Status", field: "status", type: "status"},
+            {header: "Severity", field: "severity", type: "severity"},
+            {header: "Start Time", field: "startTime", type: "date"},
+            {header: "Est. Restoration", field: "estimatedRestoration", type: "date"},
+            {header: "Affected", field: "affectedCustomers", type: "number"}
+          ]}
+          .processor=${this.processor}
+          .component=${this}
+        ></data-table>
       </div>
       <div class="timeline-section">
         <div class="section-title">Outage Timeline</div>
@@ -332,7 +346,20 @@ export class StaticModule extends LitElement {
       </div>
       <div class="table-section">
         <div class="section-title">Industry Performance Metrics</div>
-        <outage-table .dataPath=${"/industry/industryTable"} .title=${"Industry Data"} .processor=${this.processor} .component=${this}></outage-table>
+        <data-table
+          .dataPath=${"/industry/industryTable"}
+          .title=${"Industry Data"}
+          .columns=${[
+            {header: "Industry", field: "name", type: "string"},
+            {header: "Production Index", field: "productionIndex", type: "number"},
+            {header: "Employment", field: "employment", type: "number"},
+            {header: "Growth Rate", field: "growthRate", type: "number"},
+            {header: "Output Value", field: "outputValue", type: "number"},
+            {header: "Efficiency Score", field: "efficiencyScore", type: "number"}
+          ]}
+          .processor=${this.processor}
+          .component=${this}
+        ></data-table>
         ${!this.hasIndustry() ? html`<button @click=${this.loadIndustryData} class="btn btn-outline-traditional">Load Industry Data</button>` : ''}
       </div>
     `;
