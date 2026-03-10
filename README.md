@@ -15,7 +15,7 @@ A conversational interface powered by Large Language Models (LLMs), enabling nat
 ### Agentic App
 An intelligent application that leverages AI agents to dynamically generate, modify, and adapt user interfaces in real-time through the A2UI (Agent-to-UI) protocol, representing the future of adaptive software systems.
 
-> **Important**
+> [!IMPORTANT] 
 > For MAC/Linux, delete `package-lock.json` and `node_modules` before installation (prevents Windows dependency usage).
 >
 > If using Mac/Linux try looking at [compatibility readme](./MAC-LINUX.md) to fix errors
