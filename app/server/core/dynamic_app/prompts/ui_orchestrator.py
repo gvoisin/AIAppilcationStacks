@@ -20,7 +20,7 @@ COMPONENT SELECTION RULES:
 - VISUAL WIDGET PRIORITIES by data type:
   * Location/coordinate data: MapComponent (show infrastructure locations, outage areas)
   * Comparisons/aggregations: BarGraph, KpiCard (compare outage frequencies, asset conditions, customer counts)
-  * Time-series sequences: Timeline, LineGraph (outage timelines, work order progress, maintenance schedules)
+  * Time-series sequences: TimelineComponent, LineGraph (outage timelines, work order progress, maintenance schedules)
   * Lists/details: Table (asset inventories, customer lists, work order details)
   * Key metrics: KpiCard (outage counts, response times, asset health scores)
 - Optionally use 'get_native_component_catalog' for basic components (Text, Button) to complement visualizations
@@ -44,9 +44,9 @@ Return ONLY a simple list of component names in this format:
 COMPONENTS: component1, component2, component3
 
 EXAMPLES for CURRENT DATA DOMAIN:
-For outage location queries: COMPONENTS: MapComponent, Timeline, text
+For outage location queries: COMPONENTS: MapComponent, TimelineComponent, text
 For infrastructure comparisons: COMPONENTS: BarGraph, Table, KpiCard
-For disaster procedures: COMPONENTS: text, card (if procedural text) or Timeline (if process steps)
+For disaster procedures: COMPONENTS: text, card (if procedural text) or TimelineComponent (if process steps)
 For no data (inappropriate): COMPONENTS: text, card
 For no data (non-related): COMPONENTS: text, card
 For asset condition analysis: COMPONENTS: KpiCard, BarGraph, MapComponent

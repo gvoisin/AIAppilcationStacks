@@ -21,11 +21,18 @@ async def get_traditional_outage_messages():
     outages = data["outages"]
     total_outages = data["total_outages"]
 
+    # Count outages by status
+    status_counts = {"Active": 0, "Investigating": 0, "Resolved": 0, "Scheduled": 0}
+    for outage in outages:
+        status = outage.get("status", "Active")
+        if status in status_counts:
+            status_counts[status] += 1
+
     outage_summary = [
-        {"key": "0", "valueNumber": total_outages},
-        {"key": "1", "valueNumber": 0},
-        {"key": "2", "valueNumber": 0},
-        {"key": "3", "valueNumber": 0}  
+        {"key": "0", "valueNumber": status_counts["Active"]},
+        {"key": "1", "valueNumber": status_counts["Investigating"]},
+        {"key": "2", "valueNumber": status_counts["Resolved"]},
+        {"key": "3", "valueNumber": status_counts["Scheduled"]}
     ]
 
     outage_summary_labels = [
@@ -46,11 +53,15 @@ async def get_traditional_outage_messages():
             "valueMap": [
                 {"key": "id", "valueString": outage_id},
                 {"key": "location", "valueString": outage["location"]},
-                {"key": "status", "valueString": "Active"},
-                {"key": "severity", "valueString": "High"},  # Default severity
+                {"key": "status", "valueString": outage.get("status", "Active")},
+                {"key": "severity", "valueString": outage.get("severity", "High")},
                 {"key": "startTime", "valueString": outage["start_time"]},
                 {"key": "estimatedRestoration", "valueString": outage["estimated_restoration"]},
-                {"key": "affectedCustomers", "valueNumber": outage["affected_customers"]}
+                {"key": "affectedCustomers", "valueNumber": outage["affected_customers"]},
+                {"key": "cause", "valueString": outage["cause"]},
+                {"key": "crewAssigned", "valueString": outage["crew_assigned"]},
+                {"key": "priority", "valueString": outage["priority"]},
+                {"key": "notes", "valueString": outage["notes"]}
             ]
         })
 
@@ -61,36 +72,65 @@ async def get_traditional_outage_messages():
                 {"key": "name", "valueString": outage["location"]},
                 {"key": "latitude", "valueNumber": lat},
                 {"key": "longitude", "valueNumber": lng},
-                {"key": "description", "valueString": f"Active outage affecting {outage['affected_customers']} customers"}
+                {"key": "description", "valueString": f"{outage.get('status', 'Active')} outage affecting {outage['affected_customers']} customers"},
+                {"key": "status", "valueString": outage.get("status", "Active")},
+                {"key": "severity", "valueString": outage.get("severity", "High")},
+                {"key": "affectedCustomers", "valueNumber": outage["affected_customers"]},
+                {"key": "crew", "valueString": outage["crew_assigned"]}
             ]
         })
 
     energy_data = await get_traditional_energy_data()
 
+    # Calculate some derived values
+    active_outages = status_counts["Active"] + status_counts["Investigating"]
+    customers_affected = sum(outage["affected_customers"] for outage in outages)
+
     energy_kpis = [
-        {"key": "total", "valueMap": [
-            {"key": "label", "valueString": "Total Consumption"},
-            {"key": "value", "valueNumber": energy_data["consumption"]["total_mwh"]},
+        {"key": "0", "valueMap": [
+            {"key": "label", "valueString": "Total Production"},
+            {"key": "value", "valueNumber": energy_data["production"]["total_mwh"]},
             {"key": "unit", "valueString": "MWh"},
-            {"key": "icon", "valueString": "bolt"}
+            {"key": "change", "valueNumber": 12.5},
+            {"key": "changeLabel", "valueString": "vs last month"},
+            {"key": "icon", "valueString": "⚡"},
+            {"key": "colorTheme", "valueString": "cyan"},
+            {"key": "trend", "valueString": energy_data["kpi_details"]["total_production"]["trend"]},
+            {"key": "forecast", "valueString": energy_data["kpi_details"]["total_production"]["forecast"]},
+            {"key": "breakdown", "valueString": energy_data["kpi_details"]["total_production"]["breakdown"]}
         ]},
-        {"key": "renewable", "valueMap": [
-            {"key": "label", "valueString": "Renewable"},
-            {"key": "value", "valueNumber": energy_data["consumption"]["by_source"]["renewable"]},
-            {"key": "unit", "valueString": "MWh"},
-            {"key": "icon", "valueString": "energy"}
+        {"key": "1", "valueMap": [
+            {"key": "label", "valueString": "Active Outages"},
+            {"key": "value", "valueNumber": active_outages},
+            {"key": "unit", "valueString": ""},
+            {"key": "change", "valueNumber": -8},
+            {"key": "changeLabel", "valueString": "vs yesterday"},
+            {"key": "icon", "valueString": "🔌"},
+            {"key": "colorTheme", "valueString": "coral"},
+            {"key": "trend", "valueString": "decreasing after storm recovery"},
+            {"key": "breakdown", "valueString": f"High: {len([o for o in outages if o.get('severity') == 'High'])}, Medium: {len([o for o in outages if o.get('severity') == 'Medium'])}, Low: {len([o for o in outages if o.get('severity') == 'Low'])}"}
         ]},
-        {"key": "fossil", "valueMap": [
-            {"key": "label", "valueString": "Fossil Fuels"},
-            {"key": "value", "valueNumber": energy_data["consumption"]["by_source"]["fossil"]},
-            {"key": "unit", "valueString": "MWh"},
-            {"key": "icon", "valueString": "factory"}
+        {"key": "2", "valueMap": [
+            {"key": "label", "valueString": "Customers Affected"},
+            {"key": "value", "valueNumber": customers_affected},
+            {"key": "unit", "valueString": ""},
+            {"key": "change", "valueNumber": -22},
+            {"key": "changeLabel", "valueString": "vs peak"},
+            {"key": "icon", "valueString": "👥"},
+            {"key": "colorTheme", "valueString": "teal"},
+            {"key": "trend", "valueString": "restoration in progress"},
+            {"key": "affectedDistricts", "valueString": "Downtown, North, East District"}
         ]},
-        {"key": "nuclear", "valueMap": [
-            {"key": "label", "valueString": "Nuclear"},
-            {"key": "value", "valueNumber": energy_data["consumption"]["by_source"]["nuclear"]},
-            {"key": "unit", "valueString": "MWh"},
-            {"key": "icon", "valueString": "power"}
+        {"key": "3", "valueMap": [
+            {"key": "label", "valueString": "Grid Efficiency"},
+            {"key": "value", "valueNumber": energy_data["efficiency_metrics"]["grid_efficiency"]},
+            {"key": "unit", "valueString": "%"},
+            {"key": "change", "valueNumber": 1.8},
+            {"key": "changeLabel", "valueString": "vs baseline"},
+            {"key": "icon", "valueString": "📊"},
+            {"key": "colorTheme", "valueString": "green"},
+            {"key": "trend", "valueString": energy_data["kpi_details"]["grid_efficiency"]["trend"]},
+            {"key": "factors", "valueString": energy_data["kpi_details"]["grid_efficiency"]["factors"]}
         ]}
     ]
 
@@ -221,12 +261,23 @@ async def get_traditional_timeline_messages():
     timeline_events = []
 
     for i, outage in enumerate(outages):
+        # Calculate estimated duration (rough estimate based on restoration time - start time)
+        from datetime import datetime
+        start = datetime.fromisoformat(outage["start_time"].replace('Z', '+00:00'))
+        end = datetime.fromisoformat(outage["estimated_restoration"].replace('Z', '+00:00'))
+        duration_hours = int((end - start).total_seconds() / 3600)
+
         timeline_events.append({
             "key": str(i),
             "valueMap": [
                 {"key": "date", "valueString": outage["start_time"]},
                 {"key": "title", "valueString": f"Outage Reported in {outage['location']}"},
-                {"key": "description", "valueString": outage["cause"]}
+                {"key": "description", "valueString": outage["cause"]},
+                {"key": "status", "valueString": outage.get("status", "Active")},
+                {"key": "affectedCustomers", "valueNumber": outage["affected_customers"]},
+                {"key": "location", "valueString": outage["location"]},
+                {"key": "assignedCrew", "valueString": outage["crew_assigned"]},
+                {"key": "estimatedDuration", "valueString": f"{duration_hours} hours"}
             ]
         })
 

@@ -12,7 +12,7 @@ class BackendOrchestratorAgent:
 
     def __init__(self):
         self.gen_ai_provider = GenAIProvider()
-        self._client = self.gen_ai_provider.build_oci_client(model_kwargs={"temperature": 0.1})
+        self._client = self.gen_ai_provider.build_oci_client(model_id="xai.grok-4-fast-reasoning",model_kwargs={"temperature": 0.1})
         self.agent_name = "backend_orchestrator"
         self.system_prompt = BACKEND_ORCHESTRATOR_INSTRUCTIONS
         self.agent = self._build_agent()
