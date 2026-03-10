@@ -1,5 +1,5 @@
 import { html, css, svg } from "lit";
-import { property, customElement } from "lit/decorators.js";
+import { property, customElement, state } from "lit/decorators.js";
 import { Root } from "@a2ui/lit/ui";
 import { colors } from "../../theme/design-tokens.js";
 
@@ -14,6 +14,16 @@ interface ChartPoint {
   y: number;
   value: number;
   label: string;
+  index?: number;
+  seriesName?: string;
+  seriesColor?: string;
+}
+
+interface TooltipData {
+  x: number;
+  y: number;
+  point: ChartPoint;
+  visible: boolean;
 }
 
 const SERIES_COLORS = [
@@ -37,6 +47,13 @@ export class LineGraph extends Root {
   @property({ attribute: false }) accessor showArea: boolean = false;
   @property({ attribute: false }) accessor strokeWidth: number = 2;
   @property({ attribute: false }) accessor animated: boolean = true;
+  @property({ attribute: false }) accessor interactive: boolean = true;
+
+  @state() accessor tooltip: TooltipData = { x: 0, y: 0, point: { x: 0, y: 0, value: 0, label: '' }, visible: false };
+  @state() accessor selectedPoint: ChartPoint | null = null;
+  @state() accessor hoveredSeries: string | null = null;
+  @state() accessor showDetails: boolean = false;
+  @state() accessor detailsData: { point: ChartPoint, series: SeriesData, allSeries: SeriesData[] } | null = null;
 
   static styles = [
     ...Root.styles,
@@ -227,6 +244,226 @@ export class LineGraph extends Root {
         height: 3px;
         border-radius: var(--radius-sm);
       }
+
+      /* Tooltip styles */
+      .chart-tooltip {
+        position: absolute;
+        background: var(--surface-elevated);
+        border: 1px solid var(--border-primary);
+        border-radius: var(--radius-md);
+        padding: var(--space-sm) var(--space-md);
+        box-shadow: var(--shadow-lg);
+        pointer-events: none;
+        z-index: 100;
+        transform: translate(-50%, -100%);
+        margin-top: -10px;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity var(--transition-normal), visibility var(--transition-normal);
+        min-width: 120px;
+      }
+
+      .chart-tooltip.visible {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .tooltip-series {
+        display: flex;
+        align-items: center;
+        gap: var(--space-xs);
+        font-size: 11px;
+        font-weight: var(--font-weight-semibold);
+        color: var(--text-secondary);
+        margin-bottom: 4px;
+      }
+
+      .tooltip-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+
+      .tooltip-value {
+        font-size: 18px;
+        font-weight: var(--font-weight-bold);
+        color: var(--text-primary);
+      }
+
+      .tooltip-label {
+        font-size: 11px;
+        color: var(--text-secondary);
+        margin-top: 2px;
+      }
+
+      /* Selected point styles */
+      .data-point.selected {
+        stroke-width: 0.6;
+        stroke: var(--text-primary);
+        filter: drop-shadow(0 0 4px currentColor);
+      }
+
+      /* Legend interactivity */
+      .legend-item.active {
+        background: var(--surface-elevated);
+        box-shadow: var(--shadow-md);
+      }
+
+      .legend-item.dimmed {
+        opacity: 0.4;
+      }
+
+      /* Crosshair line */
+      .crosshair-line {
+        stroke: var(--border-primary);
+        stroke-width: 1;
+        stroke-dasharray: 4, 4;
+        opacity: 0;
+        transition: opacity var(--transition-normal);
+      }
+
+      .crosshair-line.visible {
+        opacity: 1;
+      }
+
+      /* Details panel */
+      .details-panel {
+        background: var(--surface-secondary);
+        border: 1px solid var(--border-primary);
+        border-radius: var(--radius-md);
+        margin-top: var(--space-md);
+        overflow: hidden;
+        max-height: 0;
+        opacity: 0;
+        transition: all 0.3s ease;
+      }
+
+      .details-panel.open {
+        max-height: 500px;
+        opacity: 1;
+      }
+
+      .details-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-md);
+        background: var(--surface-tertiary);
+        border-bottom: 1px solid var(--border-primary);
+      }
+
+      .details-title {
+        font-size: 16px;
+        font-weight: var(--font-weight-semibold);
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+      }
+
+      .details-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+      }
+
+      .details-close {
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: var(--space-xs);
+        border-radius: var(--radius-sm);
+        font-size: 18px;
+        transition: all var(--transition-normal);
+      }
+
+      .details-close:hover {
+        background: var(--hover-overlay);
+        color: var(--text-primary);
+      }
+
+      .details-body {
+        padding: var(--space-md);
+      }
+
+      .details-main {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: var(--space-md);
+        margin-bottom: var(--space-md);
+      }
+
+      .detail-item {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-xs);
+      }
+
+      .detail-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-secondary);
+      }
+
+      .detail-value {
+        font-size: 22px;
+        font-weight: var(--font-weight-bold);
+        color: var(--text-primary);
+      }
+
+      .detail-value.highlight {
+        color: var(--oracle-primary);
+      }
+
+      .detail-value.small {
+        font-size: 14px;
+        font-weight: var(--font-weight-medium);
+      }
+
+      .compare-section {
+        border-top: 1px solid var(--border-primary);
+        padding-top: var(--space-md);
+      }
+
+      .compare-title {
+        font-size: 12px;
+        font-weight: var(--font-weight-semibold);
+        color: var(--text-secondary);
+        margin-bottom: var(--space-sm);
+      }
+
+      .compare-items {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-sm);
+      }
+
+      .compare-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-xs);
+        background: var(--surface-tertiary);
+        padding: var(--space-xs) var(--space-sm);
+        border-radius: var(--radius-sm);
+        font-size: 12px;
+      }
+
+      .compare-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+      }
+
+      .compare-name {
+        color: var(--text-secondary);
+      }
+
+      .compare-value {
+        font-weight: var(--font-weight-semibold);
+        color: var(--text-primary);
+      }
     `,
   ];
 
@@ -378,16 +615,43 @@ export class LineGraph extends Root {
             ${yLabels.map(v => html`<span class="y-label">${this.formatValue(v)}</span>`)}
           </div>
           <div class="chart-area">
-            <div class="chart-container">
+            <div class="chart-container" @mouseleave=${this.hideTooltip}>
               <svg class="chart-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
                 <!-- Grid lines -->
                 ${[0, 25, 50, 75, 100].map(y => svg`
                   <line class="grid-line" x1="0" y1="${y}" x2="100" y2="${y}" vector-effect="non-scaling-stroke" />
                 `)}
                 
+                <!-- Crosshair line -->
+                ${this.interactive ? svg`
+                  <line 
+                    class="crosshair-line ${this.tooltip.visible ? 'visible' : ''}" 
+                    x1="${this.tooltip.point.x}" 
+                    y1="0" 
+                    x2="${this.tooltip.point.x}" 
+                    y2="100" 
+                    vector-effect="non-scaling-stroke"
+                  />
+                ` : ''}
+                
                 <!-- Render each series -->
                 ${series.map((s, seriesIdx) => this.renderSeries(s, seriesPoints[seriesIdx], chartHeight, minValue, paddedRange, seriesIdx))}
               </svg>
+              
+              <!-- Tooltip -->
+              ${this.interactive ? html`
+                <div 
+                  class="chart-tooltip ${this.tooltip.visible ? 'visible' : ''}"
+                  style="left: ${this.tooltip.x}%; top: ${this.tooltip.y}%;"
+                >
+                  <div class="tooltip-series">
+                    <span class="tooltip-dot" style="background-color: ${this.tooltip.point.seriesColor || colors.oracle.primary}"></span>
+                    <span>${this.tooltip.point.seriesName || 'Value'}</span>
+                  </div>
+                  <div class="tooltip-value">${this.formatValue(this.tooltip.point.value)}</div>
+                  <div class="tooltip-label">${this.tooltip.point.label}</div>
+                </div>
+              ` : ''}
             </div>
             <div class="x-axis-labels">
               ${labels.map(l => html`<span class="x-label">${l}</span>`)}
@@ -397,14 +661,157 @@ export class LineGraph extends Root {
         
         <div class="legend">
           ${series.map(s => html`
-            <div class="legend-item">
+            <div 
+              class="legend-item ${this.hoveredSeries === s.name ? 'active' : ''} ${this.hoveredSeries && this.hoveredSeries !== s.name ? 'dimmed' : ''}"
+              @mouseenter=${() => this.hoverSeries(s.name)}
+              @mouseleave=${() => this.hoverSeries(null)}
+              @click=${() => this.selectSeries(s)}
+            >
               <div class="legend-dot" style="background-color: ${s.color}; color: ${s.color};"></div>
               <span>${s.name}</span>
             </div>
           `)}
         </div>
+        ${this.renderDetailsPanel(series, labels)}
       </div>
     `;
+  }
+
+  private renderDetailsPanel(allSeries: SeriesData[], _labels: string[]) {
+    if (!this.detailsData) return html`<div class="details-panel"></div>`;
+    
+    const { point, series } = this.detailsData;
+    const pointIndex = point.index ?? 0;
+    
+    // Get values from all series at this index
+    const comparisonData = allSeries
+      .filter(s => s.name !== series.name)
+      .map(s => ({
+        name: s.name,
+        color: s.color,
+        value: s.values[pointIndex] ?? 0
+      }));
+    
+    // Calculate stats
+    const seriesValues = series.values;
+    const avg = seriesValues.reduce((a, b) => a + b, 0) / seriesValues.length;
+    const max = Math.max(...seriesValues);
+    const min = Math.min(...seriesValues);
+    const isAboveAvg = point.value > avg;
+    const percentOfMax = max > 0 ? (point.value / max) * 100 : 0;
+
+    return html`
+      <div class="details-panel ${this.showDetails ? 'open' : ''}">
+        <div class="details-header">
+          <div class="details-title">
+            <div class="details-dot" style="background-color: ${series.color};"></div>
+            ${series.name} at ${point.label}
+          </div>
+          <button class="details-close" @click=${this.closeDetails}>✕</button>
+        </div>
+        <div class="details-body">
+          <div class="details-main">
+            <div class="detail-item">
+              <span class="detail-label">Value</span>
+              <span class="detail-value highlight">${this.formatValue(point.value)}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Period</span>
+              <span class="detail-value small">${point.label}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Series Average</span>
+              <span class="detail-value small">${this.formatValue(avg)}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">vs Average</span>
+              <span class="detail-value small" style="color: ${isAboveAvg ? 'var(--semantic-success)' : 'var(--semantic-error)'};">
+                ${isAboveAvg ? '↑' : '↓'} ${Math.abs(((point.value - avg) / avg) * 100).toFixed(1)}%
+              </span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Series Range</span>
+              <span class="detail-value small">${this.formatValue(min)} - ${this.formatValue(max)}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">% of Max</span>
+              <span class="detail-value small">${percentOfMax.toFixed(0)}%</span>
+            </div>
+          </div>
+          ${comparisonData.length > 0 ? html`
+            <div class="compare-section">
+              <div class="compare-title">Other Series at ${point.label}</div>
+              <div class="compare-items">
+                ${comparisonData.map(c => html`
+                  <div class="compare-item">
+                    <div class="compare-dot" style="background-color: ${c.color};"></div>
+                    <span class="compare-name">${c.name}:</span>
+                    <span class="compare-value">${this.formatValue(c.value)}</span>
+                  </div>
+                `)}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  private closeDetails() {
+    this.showDetails = false;
+    this.selectedPoint = null;
+    this.detailsData = null;
+  }
+
+  private showTooltip(point: ChartPoint, seriesName: string, seriesColor: string) {
+    this.tooltip = {
+      x: point.x,
+      y: point.y,
+      point: { ...point, seriesName, seriesColor },
+      visible: true
+    };
+  }
+
+  private hideTooltip() {
+    this.tooltip = { ...this.tooltip, visible: false };
+  }
+
+  private handlePointClick(point: ChartPoint, series: SeriesData, pointIndex: number) {
+    const enrichedPoint = { ...point, index: pointIndex, seriesName: series.name, seriesColor: series.color };
+    
+    // Toggle details panel
+    if (this.selectedPoint && 
+        this.selectedPoint.x === point.x && 
+        this.selectedPoint.y === point.y &&
+        this.selectedPoint.seriesName === series.name) {
+      this.closeDetails();
+    } else {
+      this.selectedPoint = enrichedPoint;
+      this.detailsData = {
+        point: enrichedPoint,
+        series: series,
+        allSeries: [] // Will be set from render context
+      };
+      this.showDetails = true;
+    }
+    
+    this.dispatchEvent(new CustomEvent('point-select', {
+      bubbles: true,
+      composed: true,
+      detail: { point: enrichedPoint, series }
+    }));
+  }
+
+  private hoverSeries(seriesName: string | null) {
+    this.hoveredSeries = seriesName;
+  }
+
+  private selectSeries(series: SeriesData) {
+    this.dispatchEvent(new CustomEvent('series-select', {
+      bubbles: true,
+      composed: true,
+      detail: { series }
+    }));
   }
 
   private formatValue(value: number): string {
@@ -424,6 +831,8 @@ export class LineGraph extends Root {
     // Create area path
     const areaPath = `${linePath} L ${points[points.length - 1].x} ${chartHeight} L ${points[0].x} ${chartHeight} Z`;
 
+    const isSeriesDimmed = this.hoveredSeries && this.hoveredSeries !== series.name;
+
     return svg`
       <!-- Area fill (if enabled) -->
       ${this.showArea ? svg`
@@ -432,6 +841,7 @@ export class LineGraph extends Root {
           d="${areaPath}" 
           fill="${series.color}"
           vector-effect="non-scaling-stroke"
+          style="opacity: ${isSeriesDimmed ? '0.05' : ''}"
         />
       ` : ''}
       
@@ -442,23 +852,25 @@ export class LineGraph extends Root {
         stroke="${series.color}" 
         stroke-width="${this.strokeWidth}"
         vector-effect="non-scaling-stroke"
-        style="animation-delay: ${seriesIdx * 0.2}s; color: ${series.color};"
+        style="animation-delay: ${seriesIdx * 0.2}s; color: ${series.color}; opacity: ${isSeriesDimmed ? '0.3' : '1'};"
       />
       
       <!-- Data points -->
       ${this.showPoints ? points.map((p, i) => svg`
         <circle 
-          class="data-point ${this.animated ? 'animated' : ''}" 
+          class="data-point ${this.animated ? 'animated' : ''} ${this.selectedPoint && this.selectedPoint.x === p.x && this.selectedPoint.y === p.y && this.selectedPoint.seriesName === series.name ? 'selected' : ''}" 
           cx="${p.x}" 
           cy="${p.y}" 
-          r="0.8"
+          r="${isSeriesDimmed ? '0.5' : '0.8'}"
           fill="${series.color}"
           stroke="#1a1a2e"
           stroke-width="0.3"
           vector-effect="non-scaling-stroke"
-          style="animation-delay: ${seriesIdx * 0.2 + 1 + i * 0.1}s; color: ${series.color};"
+          style="animation-delay: ${seriesIdx * 0.2 + 1 + i * 0.1}s; color: ${series.color}; opacity: ${isSeriesDimmed ? '0.4' : '1'};"
+          @mouseenter=${() => this.showTooltip(p, series.name, series.color)}
+          @mouseleave=${() => this.hideTooltip()}
+          @click=${() => this.handlePointClick(p, series, i)}
         >
-          <title>${series.name}: ${p.label} = ${p.value}</title>
         </circle>
       `) : ''}
     `;

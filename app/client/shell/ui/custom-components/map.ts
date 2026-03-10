@@ -1,15 +1,18 @@
 import { html, css } from "lit";
-import { property, customElement } from "lit/decorators.js";
+import { property, customElement, state } from "lit/decorators.js";
 import { Root } from "@a2ui/lit/ui";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { colors } from "../../theme/design-tokens.js";
+import { ItemSelectEvent } from "./detail-modal.js";
 
 interface MapMarker {
   name: string;
   lat: number;
   lng: number;
   description?: string;
+  status?: string;
+  details?: Record<string, any>;
 }
 
 @customElement('map-component')
@@ -18,10 +21,15 @@ export class MapComponent extends Root {
   @property({ attribute: false }) accessor centerLat: number = 40.7328;
   @property({ attribute: false }) accessor centerLng: number = -74.006;
   @property({ attribute: false }) accessor zoom: number = 10;
+  @property({ attribute: false }) accessor interactive: boolean = true;
+  @property({ attribute: false }) accessor showInfoPanel: boolean = true;
+
+  @state() accessor selectedMarker: MapMarker | null = null;
 
   private map: maplibregl.Map | null = null;
   private mapContainer!: HTMLElement;
   private resizeObserver: ResizeObserver | null = null;
+  private currentPopup: maplibregl.Popup | null = null;
 
   static styles = [
     ...Root.styles,
@@ -38,9 +46,15 @@ export class MapComponent extends Root {
         background: var(--surface-primary);
       }
 
-      .map-container {
+      .map-wrapper {
+        display: flex;
         height: 100%;
         width: 100%;
+      }
+
+      .map-container {
+        flex: 1;
+        height: 100%;
         position: relative;
         box-sizing: border-box;
       }
@@ -53,6 +67,158 @@ export class MapComponent extends Root {
         color: var(--text-muted);
         font-style: italic;
       }
+
+      /* Info panel */
+      .map-info-panel {
+        width: 200px;
+        background: var(--surface-secondary);
+        border-left: 1px solid var(--border-primary);
+        padding: var(--space-md);
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .info-panel-header {
+        font-size: 14px;
+        font-weight: var(--font-weight-semibold);
+        color: var(--text-primary);
+        margin-bottom: var(--space-md);
+        padding-bottom: var(--space-sm);
+        border-bottom: 1px solid var(--border-primary);
+      }
+
+      .info-panel-empty {
+        color: var(--text-secondary);
+        font-size: 12px;
+        font-style: italic;
+        text-align: center;
+        padding: var(--space-md);
+      }
+
+      .marker-info {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-sm);
+      }
+
+      .marker-name {
+        font-size: 16px;
+        font-weight: var(--font-weight-semibold);
+        color: var(--text-primary);
+      }
+
+      .marker-description {
+        font-size: 13px;
+        color: var(--text-secondary);
+        line-height: 1.4;
+      }
+
+      .marker-coords {
+        font-size: 11px;
+        color: var(--text-muted);
+        font-family: var(--font-family-mono);
+      }
+
+      .marker-status {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: var(--radius-sm);
+        font-size: 11px;
+        font-weight: var(--font-weight-semibold);
+        text-transform: uppercase;
+        background: rgba(239, 68, 68, 0.15);
+        color: var(--color-error);
+        width: fit-content;
+      }
+
+      .marker-status.resolved {
+        background: rgba(16, 185, 129, 0.15);
+        color: var(--color-success);
+      }
+
+      .marker-status.pending {
+        background: rgba(245, 158, 11, 0.15);
+        color: var(--color-warning);
+      }
+
+      .marker-details {
+        margin-top: var(--space-sm);
+        padding-top: var(--space-sm);
+        border-top: 1px dashed var(--border-subtle);
+      }
+
+      .marker-detail-item {
+        display: flex;
+        justify-content: space-between;
+        font-size: 12px;
+        margin-bottom: 4px;
+      }
+
+      .marker-detail-label {
+        color: var(--text-secondary);
+      }
+
+      .marker-detail-value {
+        color: var(--text-primary);
+        font-weight: var(--font-weight-medium);
+      }
+
+      .marker-action-btn {
+        margin-top: var(--space-md);
+        padding: 8px 12px;
+        background: var(--oracle-primary);
+        color: white;
+        border: none;
+        border-radius: var(--radius-sm);
+        font-size: 12px;
+        cursor: pointer;
+        transition: all var(--transition-normal);
+        width: 100%;
+      }
+
+      .marker-action-btn:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+      }
+
+      /* Marker list */
+      .markers-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-xs);
+        margin-top: var(--space-sm);
+      }
+
+      .marker-list-item {
+        display: flex;
+        align-items: center;
+        gap: var(--space-xs);
+        padding: var(--space-xs) var(--space-sm);
+        background: var(--surface-primary);
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        transition: all var(--transition-normal);
+        font-size: 12px;
+        color: var(--text-secondary);
+      }
+
+      .marker-list-item:hover {
+        background: var(--hover-overlay);
+        color: var(--text-primary);
+      }
+
+      .marker-list-item.active {
+        background: var(--oracle-primary);
+        color: white;
+      }
+
+      .marker-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--color-error);
+      }
     `,
   ];
 
@@ -64,11 +230,112 @@ export class MapComponent extends Root {
       this.addMarkers();
     }
 
+    if (markers.length === 0) {
+      return html`
+        <div class="map-container">
+          <div class="empty-state">No map data available</div>
+        </div>
+      `;
+    }
+
     return html`
-      <div class="map-container">
-        ${markers.length === 0 ? html`<div class="empty-state">No map data available</div>` : ''}
+      <div class="map-wrapper">
+        <div class="map-container"></div>
+        ${this.showInfoPanel ? this.renderInfoPanel(markers) : ''}
       </div>
     `;
+  }
+
+  private renderInfoPanel(markers: MapMarker[]) {
+    return html`
+      <div class="map-info-panel">
+        ${this.selectedMarker ? this.renderSelectedMarker() : this.renderMarkersList(markers)}
+      </div>
+    `;
+  }
+
+  private renderSelectedMarker() {
+    const marker = this.selectedMarker!;
+    return html`
+      <div class="marker-info">
+        <div class="marker-name">${marker.name}</div>
+        ${marker.status ? html`
+          <span class="marker-status ${this.getStatusClass(marker.status)}">${marker.status}</span>
+        ` : ''}
+        ${marker.description ? html`
+          <div class="marker-description">${marker.description}</div>
+        ` : ''}
+        <div class="marker-coords">${marker.lat.toFixed(4)}, ${marker.lng.toFixed(4)}</div>
+        ${marker.details ? html`
+          <div class="marker-details">
+            ${Object.entries(marker.details).map(([key, value]) => html`
+              <div class="marker-detail-item">
+                <span class="marker-detail-label">${this.formatLabel(key)}</span>
+                <span class="marker-detail-value">${value}</span>
+              </div>
+            `)}
+          </div>
+        ` : ''}
+        <button class="marker-action-btn" @click=${() => this.flyToMarker(marker)}>
+          Center on Map
+        </button>
+        <button class="marker-action-btn" style="background: var(--surface-primary); color: var(--text-secondary); margin-top: var(--space-xs);" @click=${() => this.clearSelection()}>
+          Back to List
+        </button>
+      </div>
+    `;
+  }
+
+  private renderMarkersList(markers: MapMarker[]) {
+    return html`
+      <div class="info-panel-header">Locations (${markers.length})</div>
+      <div class="markers-list">
+        ${markers.map((marker, index) => html`
+          <div 
+            class="marker-list-item ${this.selectedMarker === marker ? 'active' : ''}"
+            @click=${() => this.selectMarker(marker, index)}
+          >
+            <span class="marker-dot"></span>
+            <span>${marker.name}</span>
+          </div>
+        `)}
+      </div>
+    `;
+  }
+
+  private selectMarker(marker: MapMarker, index: number) {
+    this.selectedMarker = marker;
+    this.flyToMarker(marker);
+    this.dispatchEvent(new ItemSelectEvent(marker, index));
+  }
+
+  private clearSelection() {
+    this.selectedMarker = null;
+  }
+
+  private flyToMarker(marker: MapMarker) {
+    if (this.map) {
+      this.map.flyTo({
+        center: [marker.lng, marker.lat],
+        zoom: Math.max(this.zoom, 12),
+        duration: 1000
+      });
+    }
+  }
+
+  private formatLabel(key: string): string {
+    return key
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/[_-]/g, ' ')
+      .replace(/\b\w/g, l => l.toUpperCase())
+      .trim();
+  }
+
+  private getStatusClass(status: string): string {
+    const s = status.toLowerCase();
+    if (s.includes('resolved') || s.includes('completed')) return 'resolved';
+    if (s.includes('pending') || s.includes('investigating')) return 'pending';
+    return '';
   }
 
   firstUpdated() {
@@ -179,18 +446,31 @@ export class MapComponent extends Root {
 
     const markers = this.getMarkers();
 
-    // Remove existing markers
-    if (this.map.getSource('markers')) {
+    // Remove existing layers and source
+    if (this.map.getLayer('markers-layer')) {
       this.map.removeLayer('markers-layer');
+    }
+    if (this.map.getSource('markers')) {
       this.map.removeSource('markers');
+    }
+
+    // Close any existing popup
+    if (this.currentPopup) {
+      this.currentPopup.remove();
+      this.currentPopup = null;
     }
 
     if (markers.length > 0) {
       const geojson: GeoJSON.FeatureCollection = {
         type: "FeatureCollection",
-        features: markers.map(marker => ({
+        features: markers.map((marker, index) => ({
           type: "Feature",
-          properties: { name: marker.name, description: marker.description },
+          properties: { 
+            name: marker.name, 
+            description: marker.description,
+            status: marker.status,
+            index: index
+          },
           geometry: {
             type: "Point",
             coordinates: [marker.lng, marker.lat],
@@ -208,38 +488,70 @@ export class MapComponent extends Root {
         type: "circle",
         source: "markers",
         paint: {
-          "circle-radius": 8,
-          "circle-color": "#ff0000",
-          "circle-stroke-width": 2,
+          "circle-radius": 10,
+          "circle-color": colors.semantic.error,
+          "circle-stroke-width": 3,
           "circle-stroke-color": "#ffffff",
         },
       });
 
-      // Popup on click TODO: fix
+      // Enhanced popup on click
       this.map.on("click", "markers-layer", (e) => {
-        const coordinates = (e.features?.[0].geometry as GeoJSON.Point).coordinates.slice() as [number, number];
-        const name = e.features?.[0].properties?.name;
+        if (!e.features || e.features.length === 0) return;
+        
+        const feature = e.features[0];
+        const coordinates = (feature.geometry as GeoJSON.Point).coordinates.slice() as [number, number];
+        const props = feature.properties;
+        const name = props?.name || 'Location';
+        const description = props?.description || '';
+        const status = props?.status || '';
+        const index = props?.index ?? 0;
 
-        const popup = new maplibregl.Popup({ anchor: 'top' })
-          .setLngLat(coordinates)
-          .setHTML(`<strong>${name}</strong>`);
-
-        // Add to map first for positioning, then move to document.body
-        popup.addTo(this.map!);
-        const el = popup.getElement();
-        if (el && el.parentNode) {
-          el.parentNode.removeChild(el);
-          document.body.appendChild(el);
+        // Select the marker in the info panel
+        const marker = markers[index];
+        if (marker) {
+          this.selectedMarker = marker;
+          this.requestUpdate();
         }
+
+        // Create enhanced popup HTML
+        const popupContent = `
+          <div style="font-family: system-ui, sans-serif; min-width: 150px;">
+            <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${name}</div>
+            ${status ? `<div style="font-size: 11px; padding: 2px 6px; background: rgba(239,68,68,0.15); color: #ef4444; border-radius: 4px; display: inline-block; margin-bottom: 6px; text-transform: uppercase; font-weight: 600;">${status}</div>` : ''}
+            ${description ? `<div style="font-size: 12px; color: #666; line-height: 1.4;">${description}</div>` : ''}
+          </div>
+        `;
+
+        // Close existing popup
+        if (this.currentPopup) {
+          this.currentPopup.remove();
+        }
+
+        this.currentPopup = new maplibregl.Popup({ 
+          offset: 15,
+          closeButton: true,
+          maxWidth: '250px'
+        })
+          .setLngLat(coordinates)
+          .setHTML(popupContent)
+          .addTo(this.map!);
+
+        // Dispatch select event
+        this.dispatchEvent(new ItemSelectEvent(marker, index));
       });
 
       // Change cursor on hover
       this.map.on("mouseenter", "markers-layer", () => {
-        this.map!.getCanvas().style.cursor = "pointer";
+        if (this.map) {
+          this.map.getCanvas().style.cursor = "pointer";
+        }
       });
 
       this.map.on("mouseleave", "markers-layer", () => {
-        this.map!.getCanvas().style.cursor = "";
+        if (this.map) {
+          this.map.getCanvas().style.cursor = "";
+        }
       });
     }
   }

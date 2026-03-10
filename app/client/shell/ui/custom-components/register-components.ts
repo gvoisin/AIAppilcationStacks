@@ -5,6 +5,7 @@ import { MapComponent } from "./map.js";
 import { TimelineComponent } from "./timeline.js";
 import { Table } from "./table.js";
 import { KpiCard, KpiCardGroup } from "./kpi-card.js";
+import { DetailModal } from "./detail-modal.js";
 
 export function registerShellComponents() {
   componentRegistry.register("BarGraph", BarGraph, "bar-graph", {
@@ -16,6 +17,8 @@ export function registerShellComponents() {
       orientation: { type: "string", enum: ["vertical", "horizontal"] },
       barWidth: { type: "number" },
       gap: { type: "number" },
+      interactive: { type: "boolean", description: "Enable hover and click interactions" },
+      colorful: { type: "boolean", description: "Use different colors for each bar" },
     },
     required: ["dataPath", "labelPath"],
   });
@@ -31,6 +34,7 @@ export function registerShellComponents() {
       showArea: { type: "boolean", description: "Fill area under the line" },
       strokeWidth: { type: "number", description: "Line stroke width" },
       animated: { type: "boolean", description: "Enable line drawing animation" },
+      interactive: { type: "boolean", description: "Enable tooltips and point selection" },
     },
     required: ["labelPath"],
   });
@@ -42,6 +46,8 @@ export function registerShellComponents() {
       centerLat: { type: "number" },
       centerLng: { type: "number" },
       zoom: { type: "number" },
+      interactive: { type: "boolean", description: "Enable marker interactions" },
+      showInfoPanel: { type: "boolean", description: "Show side info panel" },
     },
     required: [],
   });
@@ -50,6 +56,7 @@ export function registerShellComponents() {
     type: "object",
     properties: {
       dataPath: { type: "string" },
+      expandable: { type: "boolean", description: "Enable expandable detail panels" },
     },
     required: [],
   });
@@ -74,6 +81,8 @@ export function registerShellComponents() {
       },
       showPagination: { type: "boolean", description: "Show pagination controls" },
       pageSize: { type: "number", description: "Number of records per page" },
+      expandable: { type: "boolean", description: "Enable expandable rows" },
+      showDetailPanel: { type: "boolean", description: "Show side detail panel on row selection" },
     },
     required: ["dataPath", "columns"],
   });
@@ -90,6 +99,7 @@ export function registerShellComponents() {
       icon: { type: "string", description: "Icon character or emoji" },
       colorTheme: { type: "string", enum: ["cyan", "coral", "teal", "yellow", "purple", "green", "pink", "orange"] },
       compact: { type: "boolean", description: "Use compact sizing" },
+      clickable: { type: "boolean", description: "Enable click to show details" },
     },
     required: [],
   });
@@ -102,5 +112,16 @@ export function registerShellComponents() {
       compact: { type: "boolean", description: "Use compact sizing for all cards" },
     },
     required: ["dataPath"],
+  });
+
+  componentRegistry.register("DetailModal", DetailModal, "detail-modal", {
+    type: "object",
+    properties: {
+      open: { type: "boolean", description: "Whether the modal is visible" },
+      title: { type: "string", description: "Modal title" },
+      position: { type: "string", enum: ["modal", "panel", "inline"], description: "Display mode" },
+      data: { type: "object", description: "Data to display in the modal" },
+    },
+    required: [],
   });
 }

@@ -1,7 +1,9 @@
 import { html, css } from "lit";
-import { property, customElement } from "lit/decorators.js";
+import { property, customElement, state } from "lit/decorators.js";
 import { Root } from "@a2ui/lit/ui";
 import { colors } from "../../theme/design-tokens.js";
+import { KpiClickEvent } from "./detail-modal.js";
+import "./detail-modal.js";
 
 interface KpiData {
   label: string;
@@ -11,6 +13,7 @@ interface KpiData {
   changeLabel?: string;
   icon?: string;
   color?: string;
+  details?: Record<string, any>;
 }
 
 const KPI_THEMES: Record<string, { primary: string; bg: string }> = {
@@ -36,6 +39,11 @@ export class KpiCard extends Root {
   @property({ attribute: false }) accessor icon: string = "";
   @property({ attribute: false }) accessor colorTheme: string = "cyan";
   @property({ attribute: false }) accessor compact: boolean = false;
+  @property({ attribute: false }) accessor clickable: boolean = true;
+  @property({ attribute: false }) accessor details: Record<string, any> = {};
+
+  @state() accessor showDetails = false;
+  @state() accessor currentKpiData: KpiData | null = null;
 
   static styles = [
     ...Root.styles,
@@ -64,6 +72,14 @@ export class KpiCard extends Root {
       .kpi-card:hover {
         transform: translateY(-2px);
         box-shadow: var(--shadow-glow);
+      }
+
+      .kpi-card.clickable {
+        cursor: pointer;
+      }
+
+      .kpi-card.clickable:active {
+        transform: translateY(0);
       }
 
       .kpi-card.compact {
@@ -176,6 +192,19 @@ export class KpiCard extends Root {
         font-style: italic;
         font-size: 12px;
       }
+
+      .click-hint {
+        font-size: 10px;
+        color: var(--text-muted);
+        text-align: center;
+        margin-top: var(--space-sm);
+        opacity: 0;
+        transition: opacity var(--transition-normal);
+      }
+
+      .kpi-card.clickable:hover .click-hint {
+        opacity: 1;
+      }
     `,
   ];
 
@@ -200,7 +229,8 @@ export class KpiCard extends Root {
         change: this.change ?? undefined,
         changeLabel: this.changeLabel,
         icon: this.icon,
-        color: this.colorTheme
+        color: this.colorTheme,
+        details: this.details
       };
     }
 
@@ -208,11 +238,13 @@ export class KpiCard extends Root {
       return html`<div class="empty-state">No KPI data</div>`;
     }
 
+    // Store current data for modal
+    this.currentKpiData = kpiData;
     const themeColors = KPI_THEMES[kpiData.color || this.colorTheme] || KPI_THEMES.cyan;
     const changeClass = this.getChangeClass(kpiData.change);
 
     return html`
-      <div class="kpi-card ${this.compact ? 'compact' : ''}">
+      <div class="kpi-card ${this.compact ? 'compact' : ''} ${this.clickable ? 'clickable' : ''}" @click=${this.handleClick}>
         <div class="kpi-header">
           <span class="kpi-label">${kpiData.label}</span>
           ${kpiData.icon ? html`
@@ -234,8 +266,48 @@ export class KpiCard extends Root {
             ${kpiData.changeLabel ? html`<span class="kpi-change-label">${kpiData.changeLabel}</span>` : ''}
           </div>
         ` : ''}
+        ${this.clickable ? html`<div class="click-hint">Click for details</div>` : ''}
       </div>
+      <detail-modal
+        .open=${this.showDetails}
+        .title=${kpiData.label + ' Details'}
+        .position=${'modal'}
+        .data=${this.getDetailData(kpiData)}
+        @close=${this.closeDetails}
+      ></detail-modal>
     `;
+  }
+
+  private handleClick() {
+    if (this.clickable && this.currentKpiData) {
+      this.showDetails = true;
+      this.dispatchEvent(new KpiClickEvent(this.currentKpiData));
+    }
+  }
+
+  private closeDetails() {
+    this.showDetails = false;
+  }
+
+  private getDetailData(kpiData: KpiData): Record<string, any> {
+    const data: Record<string, any> = {
+      'Metric': kpiData.label,
+      'Current Value': `${this.formatValue(kpiData.value)}${kpiData.unit ? ' ' + kpiData.unit : ''}`,
+    };
+
+    if (kpiData.change !== undefined) {
+      data['Change'] = `${kpiData.change > 0 ? '+' : ''}${kpiData.change}%`;
+      if (kpiData.changeLabel) {
+        data['Period'] = kpiData.changeLabel;
+      }
+    }
+
+    // Add any extra details
+    if (kpiData.details) {
+      Object.assign(data, kpiData.details);
+    }
+
+    return data;
   }
 
   private parseKpiData(rawData: any): KpiData | null {

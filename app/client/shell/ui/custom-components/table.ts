@@ -1,7 +1,9 @@
 import { html, css } from "lit";
-import { property, customElement } from "lit/decorators.js";
+import { property, customElement, state } from "lit/decorators.js";
 import { Root } from "@a2ui/lit/ui";
 import { colors, designTokensCSS } from "../../theme/design-tokens.js";
+import { ItemSelectEvent } from "./detail-modal.js";
+import "./detail-modal.js";
 
 interface TableColumn {
   header: string;
@@ -20,6 +22,12 @@ export class Table extends Root {
   @property({ attribute: false }) accessor columns: TableColumn[] = [];
   @property({ attribute: false }) accessor showPagination: boolean = false;
   @property({ attribute: false }) accessor pageSize: number = 10;
+  @property({ attribute: false }) accessor expandable: boolean = true;
+  @property({ attribute: false }) accessor showDetailPanel: boolean = false;
+
+  @state() accessor expandedRows: Set<number> = new Set();
+  @state() accessor selectedRow: number | null = null;
+  @state() accessor selectedRecord: TableRecord | null = null;
 
   static styles = [
     ...Root.styles,
@@ -236,6 +244,126 @@ export class Table extends Root {
         color: var(--text-primary);
         font-weight: var(--font-weight-medium);
       }
+
+      /* Expandable row styles */
+      tbody tr.clickable {
+        cursor: pointer;
+      }
+
+      tbody tr.selected {
+        background: var(--surface-elevated);
+        border-left: 3px solid var(--oracle-primary);
+      }
+
+      tbody tr.expanded {
+        background: var(--surface-secondary);
+      }
+
+      .expand-icon {
+        width: 20px;
+        text-align: center;
+        color: var(--text-secondary);
+        transition: transform var(--transition-normal);
+        font-size: 12px;
+      }
+
+      .expand-icon.rotated {
+        transform: rotate(90deg);
+      }
+
+      .expanded-content {
+        background: var(--surface-secondary);
+        border-top: 1px dashed var(--border-subtle);
+      }
+
+      .expanded-content td {
+        padding: var(--space-md) var(--space-lg);
+      }
+
+      .expanded-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: var(--space-md);
+      }
+
+      .expanded-field {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-xs);
+      }
+
+      .expanded-label {
+        font-size: 10px;
+        font-weight: var(--font-weight-semibold);
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+
+      .expanded-value {
+        font-size: 13px;
+        color: var(--text-primary);
+      }
+
+      /* Detail panel styles */
+      .table-with-panel {
+        display: flex;
+        gap: var(--space-md);
+      }
+
+      .table-main {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .detail-panel {
+        width: 320px;
+        background: var(--surface-secondary);
+        border-radius: var(--radius-md);
+        padding: var(--space-md);
+        position: sticky;
+        top: 0;
+        max-height: 400px;
+        overflow-y: auto;
+      }
+
+      .detail-panel-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: var(--space-md);
+        padding-bottom: var(--space-sm);
+        border-bottom: 1px solid var(--border-primary);
+      }
+
+      .detail-panel-title {
+        font-size: 14px;
+        font-weight: var(--font-weight-semibold);
+        color: var(--text-primary);
+      }
+
+      .detail-panel-close {
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        font-size: 16px;
+        padding: 4px;
+        border-radius: var(--radius-sm);
+      }
+
+      .detail-panel-close:hover {
+        background: var(--hover-overlay);
+        color: var(--text-primary);
+      }
+
+      .detail-panel-empty {
+        color: var(--text-secondary);
+        font-style: italic;
+        font-size: 13px;
+        text-align: center;
+        padding: var(--space-lg);
+      }
     `,
   ];
 
@@ -294,21 +422,23 @@ export class Table extends Root {
       `;
     }
 
+    // Render with or without detail panel
+    if (this.showDetailPanel) {
+      return html`
+        <div class="table-container table-with-panel">
+          <div class="table-main">
+            <div class="table-title">${this.title}</div>
+            ${this.renderTable(tableData)}
+          </div>
+          ${this.renderDetailPanel()}
+        </div>
+      `;
+    }
+
     return html`
       <div class="table-container">
         <div class="table-title">${this.title}</div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                ${this.columns.map(column => html`<th>${column.header}</th>`)}
-              </tr>
-            </thead>
-            <tbody>
-              ${tableData.map(record => this.renderRow(record))}
-            </tbody>
-          </table>
-        </div>
+        ${this.renderTable(tableData)}
         <div class="table-footer">
           <span class="record-count">${tableData.length} record${tableData.length !== 1 ? 's' : ''} total</span>
         </div>
@@ -316,12 +446,140 @@ export class Table extends Root {
     `;
   }
 
-  private renderRow(record: TableRecord) {
+  private renderTable(tableData: TableRecord[]) {
     return html`
-      <tr>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              ${this.expandable ? html`<th style="width: 30px;"></th>` : ''}
+              ${this.columns.map(column => html`<th>${column.header}</th>`)}
+            </tr>
+          </thead>
+          <tbody>
+            ${tableData.map((record, index) => this.renderRow(record, index))}
+          </tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  private renderDetailPanel() {
+    if (!this.selectedRecord) {
+      return html`
+        <div class="detail-panel">
+          <div class="detail-panel-header">
+            <span class="detail-panel-title">Details</span>
+          </div>
+          <div class="detail-panel-empty">Select a row to view details</div>
+        </div>
+      `;
+    }
+
+    return html`
+      <div class="detail-panel">
+        <div class="detail-panel-header">
+          <span class="detail-panel-title">Record Details</span>
+          <button class="detail-panel-close" @click=${this.clearSelection}>×</button>
+        </div>
+        <div class="expanded-grid">
+          ${Object.entries(this.selectedRecord).map(([key, value]) => html`
+            <div class="expanded-field">
+              <span class="expanded-label">${this.formatFieldLabel(key)}</span>
+              <span class="expanded-value">${this.formatFieldValue(key, value)}</span>
+            </div>
+          `)}
+        </div>
+      </div>
+    `;
+  }
+
+  private renderRow(record: TableRecord, index: number) {
+    const isExpanded = this.expandedRows.has(index);
+    const isSelected = this.selectedRow === index;
+
+    return html`
+      <tr 
+        class="${this.expandable ? 'clickable' : ''} ${isExpanded ? 'expanded' : ''} ${isSelected ? 'selected' : ''}"
+        @click=${() => this.handleRowClick(record, index)}
+      >
+        ${this.expandable ? html`
+          <td>
+            <span class="expand-icon ${isExpanded ? 'rotated' : ''}" @click=${(e: Event) => this.toggleExpand(e, index)}>▶</span>
+          </td>
+        ` : ''}
         ${this.columns.map(column => this.renderCell(record, column))}
       </tr>
+      ${isExpanded ? this.renderExpandedContent(record) : ''}
     `;
+  }
+
+  private renderExpandedContent(record: TableRecord) {
+    // Get all fields that are not in the main columns
+    const displayedFields = new Set(this.columns.map(c => c.field));
+    const extraFields = Object.entries(record).filter(([key]) => !displayedFields.has(key));
+
+    // If no extra fields, show all fields with more detail
+    const fieldsToShow = extraFields.length > 0 ? extraFields : Object.entries(record);
+
+    return html`
+      <tr class="expanded-content">
+        <td colspan="${this.columns.length + (this.expandable ? 1 : 0)}">
+          <div class="expanded-grid">
+            ${fieldsToShow.map(([key, value]) => html`
+              <div class="expanded-field">
+                <span class="expanded-label">${this.formatFieldLabel(key)}</span>
+                <span class="expanded-value">${this.formatFieldValue(key, value)}</span>
+              </div>
+            `)}
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+
+  private handleRowClick(record: TableRecord, index: number) {
+    if (this.showDetailPanel) {
+      this.selectedRow = index;
+      this.selectedRecord = record;
+    }
+    // Dispatch event for parent components
+    this.dispatchEvent(new ItemSelectEvent(record, index));
+  }
+
+  private toggleExpand(e: Event, index: number) {
+    e.stopPropagation();
+    if (this.expandedRows.has(index)) {
+      this.expandedRows.delete(index);
+    } else {
+      this.expandedRows.add(index);
+    }
+    this.requestUpdate();
+  }
+
+  private clearSelection() {
+    this.selectedRow = null;
+    this.selectedRecord = null;
+  }
+
+  private formatFieldLabel(key: string): string {
+    return key
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/[_-]/g, ' ')
+      .replace(/\b\w/g, l => l.toUpperCase())
+      .trim();
+  }
+
+  private formatFieldValue(key: string, value: any): string {
+    if (value === undefined || value === null) return '—';
+    const keyLower = key.toLowerCase();
+    if (keyLower.includes('date') || keyLower.includes('time')) {
+      return this.formatDateTime(String(value));
+    }
+    if (typeof value === 'number') {
+      return this.formatNumber(value);
+    }
+    return String(value);
   }
 
   private renderCell(record: TableRecord, column: TableColumn) {

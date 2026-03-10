@@ -1,13 +1,27 @@
 import { html, css } from "lit";
-import { property, customElement } from "lit/decorators.js";
+import { property, customElement, state } from "lit/decorators.js";
 import { Root } from "@a2ui/lit/ui";
 import { colors } from "../../theme/design-tokens.js";
+import { ItemSelectEvent } from "./detail-modal.js";
 
 interface BarData {
   category: string;
   value: number;
   color: string;
+  percentage?: number;
+  rank?: number;
+  total?: number;
+  details?: Record<string, any>;
 }
+
+const BAR_COLORS = [
+  colors.oracle.primary,
+  colors.oracle.secondary,
+  colors.semantic.success,
+  colors.oracle.accent,
+  colors.semantic.warning,
+  colors.chat.bgSecondary,
+];
 
 @customElement('bar-graph')
 export class BarGraph extends Root {
@@ -17,6 +31,13 @@ export class BarGraph extends Root {
   @property({ attribute: false }) accessor orientation: string = 'vertical';
   @property({ attribute: false }) accessor barWidth: number = 0.2;
   @property({ attribute: false }) accessor gap: number = 0.1;
+  @property({ attribute: false }) accessor interactive: boolean = true;
+  @property({ attribute: false }) accessor colorful: boolean = true;
+
+  @state() accessor hoveredBar: number | null = null;
+  @state() accessor selectedBar: number | null = null;
+  @state() accessor showDetails: boolean = false;
+  @state() accessor selectedBarData: BarData | null = null;
 
   static styles = [
     ...Root.styles,
@@ -124,6 +145,219 @@ export class BarGraph extends Root {
         height: 12px;
         border-radius: var(--radius-sm);
       }
+
+      /* Interactive styles */
+      .bar-item.interactive {
+        cursor: pointer;
+      }
+
+      .bar-item.interactive:hover .bar {
+        filter: brightness(1.15);
+        transform: scaleY(1.02);
+        transform-origin: bottom;
+      }
+
+      .bar-item.interactive .bar {
+        transition: all var(--transition-normal);
+      }
+
+      .bar-item.selected .bar {
+        box-shadow: 0 0 0 3px var(--oracle-primary), 0 0 15px rgba(136, 194, 255, 0.4);
+      }
+
+      .bar-item.dimmed .bar {
+        opacity: 0.4;
+      }
+
+      .value-label {
+        opacity: 0;
+        transition: opacity var(--transition-normal);
+      }
+
+      .bar-item:hover .value-label,
+      .bar-item.selected .value-label {
+        opacity: 1;
+      }
+
+      /* Tooltip */
+      .bar-tooltip {
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--surface-elevated);
+        border: 1px solid var(--border-primary);
+        border-radius: var(--radius-md);
+        padding: var(--space-sm) var(--space-md);
+        box-shadow: var(--shadow-lg);
+        z-index: 100;
+        min-width: 120px;
+        margin-bottom: 10px;
+        pointer-events: none;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity var(--transition-normal), visibility var(--transition-normal);
+      }
+
+      .bar-item:hover .bar-tooltip {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .tooltip-category {
+        font-size: 12px;
+        font-weight: var(--font-weight-semibold);
+        color: var(--text-primary);
+        margin-bottom: 4px;
+      }
+
+      .tooltip-value {
+        font-size: 18px;
+        font-weight: var(--font-weight-bold);
+        color: var(--oracle-primary);
+      }
+
+      .tooltip-percent {
+        font-size: 11px;
+        color: var(--text-secondary);
+        margin-top: 4px;
+      }
+
+      /* Legend interactivity */
+      .legend-item.interactive {
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: var(--radius-sm);
+        transition: all var(--transition-normal);
+      }
+
+      .legend-item.interactive:hover {
+        background: var(--hover-overlay);
+      }
+
+      .legend-item.active {
+        background: var(--surface-secondary);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .legend-item.dimmed {
+        opacity: 0.4;
+      }
+
+      /* Details panel */
+      .details-panel {
+        background: var(--surface-secondary);
+        border: 1px solid var(--border-primary);
+        border-radius: var(--radius-md);
+        margin-top: var(--space-md);
+        overflow: hidden;
+        max-height: 0;
+        opacity: 0;
+        transition: all 0.3s ease;
+      }
+
+      .details-panel.open {
+        max-height: 400px;
+        opacity: 1;
+      }
+
+      .details-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: var(--space-md);
+        background: var(--surface-tertiary);
+        border-bottom: 1px solid var(--border-primary);
+      }
+
+      .details-title {
+        font-size: 16px;
+        font-weight: var(--font-weight-semibold);
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+      }
+
+      .details-color {
+        width: 16px;
+        height: 16px;
+        border-radius: var(--radius-sm);
+      }
+
+      .details-close {
+        background: transparent;
+        border: none;
+        color: var(--text-secondary);
+        cursor: pointer;
+        padding: var(--space-xs);
+        border-radius: var(--radius-sm);
+        font-size: 18px;
+        transition: all var(--transition-normal);
+      }
+
+      .details-close:hover {
+        background: var(--hover-overlay);
+        color: var(--text-primary);
+      }
+
+      .details-body {
+        padding: var(--space-md);
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: var(--space-md);
+      }
+
+      .detail-item {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-xs);
+      }
+
+      .detail-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--text-secondary);
+      }
+
+      .detail-value {
+        font-size: 20px;
+        font-weight: var(--font-weight-bold);
+        color: var(--text-primary);
+      }
+
+      .detail-value.highlight {
+        color: var(--oracle-primary);
+      }
+
+      .detail-value.small {
+        font-size: 14px;
+        font-weight: var(--font-weight-medium);
+      }
+
+      .detail-comparison {
+        display: flex;
+        align-items: center;
+        gap: var(--space-xs);
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-top: var(--space-xs);
+      }
+
+      .comparison-bar {
+        flex: 1;
+        height: 4px;
+        background: var(--border-primary);
+        border-radius: 2px;
+        overflow: hidden;
+      }
+
+      .comparison-fill {
+        height: 100%;
+        border-radius: 2px;
+        transition: width 0.3s ease;
+      }
     `,
   ];
 
@@ -152,16 +386,24 @@ export class BarGraph extends Root {
         }
 
         if (Array.isArray(values) && Array.isArray(labels) && values.length === labels.length) {
-          barData = labels.map((label: any, i: number) => ({
-            category: String(label),
-            value: typeof values[i] === 'number' ? values[i] : parseFloat(values[i]) || 0,
-            color: colors.oracle.primary
-          }));
+          const total = values.reduce((sum: number, v: any) => sum + (typeof v === 'number' ? v : parseFloat(v) || 0), 0);
+          barData = labels.map((label: any, i: number) => {
+            const value = typeof values[i] === 'number' ? values[i] : parseFloat(values[i]) || 0;
+            return {
+              category: String(label),
+              value,
+              color: this.colorful ? BAR_COLORS[i % BAR_COLORS.length] : colors.oracle.primary,
+              percentage: total > 0 ? (value / total) * 100 : 0,
+              rank: i + 1,
+              total: values.length
+            };
+          });
         }
       }
     }
 
     const maxValue = barData.length > 0 ? Math.max(...barData.map(b => b.value)) : 0;
+    const totalValue = barData.reduce((sum, b) => sum + b.value, 0);
 
     if (!barData || barData.length === 0) {
       return html`
@@ -175,34 +417,152 @@ export class BarGraph extends Root {
       <div class="bar-chart">
         <div class="chart-title">${this.title}</div>
         <div class="bar-container" style="gap: 10px;">
-          ${barData.map((item) => this.renderBar(item, maxValue))}
+          ${barData.map((item, index) => this.renderBar(item, index, maxValue, totalValue))}
         </div>
         <div class="legend">
-          ${barData.map(item => this.renderLegendItem(item))}
+          ${barData.map((item, index) => this.renderLegendItem(item, index, totalValue))}
         </div>
+        ${this.renderDetailsPanel(totalValue, maxValue)}
       </div>
     `;
   }
 
-  private renderBar(item: BarData, maxValue: number) {
+  private renderBar(item: BarData, index: number, maxValue: number, totalValue: number) {
     const heightPercent = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
+    const percentage = totalValue > 0 ? ((item.value / totalValue) * 100).toFixed(1) : '0';
+    const isHovered = this.hoveredBar === index;
+    const isSelected = this.selectedBar === index;
+    const isDimmed = this.hoveredBar !== null && this.hoveredBar !== index;
 
     return html`
-      <div class="bar-item">
+      <div 
+        class="bar-item ${this.interactive ? 'interactive' : ''} ${isSelected ? 'selected' : ''} ${isDimmed ? 'dimmed' : ''}"
+        @mouseenter=${() => this.handleBarHover(index)}
+        @mouseleave=${() => this.handleBarHover(null)}
+        @click=${() => this.handleBarClick({...item, rank: index + 1, total: totalValue}, index, totalValue)}
+      >
         <div class="bar" style="height: ${heightPercent}%; background-color: ${item.color};">
-          <div class="value-label">${item.value}</div>
+          <div class="value-label">${this.formatValue(item.value)}</div>
         </div>
         <div class="bar-label">${item.category}</div>
+        ${this.interactive ? html`
+          <div class="bar-tooltip">
+            <div class="tooltip-category">${item.category}</div>
+            <div class="tooltip-value">${this.formatValue(item.value)}</div>
+            <div class="tooltip-percent">${percentage}% of total</div>
+          </div>
+        ` : ''}
       </div>
     `;
   }
 
-  private renderLegendItem(item: BarData) {
+  private renderLegendItem(item: BarData, index: number, totalValue: number) {
+    const isActive = this.selectedBar === index;
+    const isDimmed = this.hoveredBar !== null && this.hoveredBar !== index;
+
     return html`
-      <div class="legend-item">
+      <div 
+        class="legend-item ${this.interactive ? 'interactive' : ''} ${isActive ? 'active' : ''} ${isDimmed ? 'dimmed' : ''}"
+        @click=${() => this.handleBarClick(item, index, totalValue)}
+        @mouseenter=${() => this.handleBarHover(index)}
+        @mouseleave=${() => this.handleBarHover(null)}
+      >
         <div class="legend-color" style="background-color: ${item.color};"></div>
         <span>${item.category}</span>
       </div>
     `;
+  }
+
+  private renderDetailsPanel(totalValue: number, maxValue: number) {
+    if (!this.selectedBarData) return html`<div class="details-panel"></div>`;
+    
+    const data = this.selectedBarData;
+    const percentage = data.percentage ?? (totalValue > 0 ? (data.value / totalValue) * 100 : 0);
+    const percentOfMax = maxValue > 0 ? (data.value / maxValue) * 100 : 0;
+
+    return html`
+      <div class="details-panel ${this.showDetails ? 'open' : ''}">
+        <div class="details-header">
+          <div class="details-title">
+            <div class="details-color" style="background-color: ${data.color};"></div>
+            ${data.category}
+          </div>
+          <button class="details-close" @click=${this.closeDetails}>✕</button>
+        </div>
+        <div class="details-body">
+          <div class="detail-item">
+            <span class="detail-label">Value</span>
+            <span class="detail-value highlight">${this.formatValue(data.value)}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Share of Total</span>
+            <span class="detail-value">${percentage.toFixed(1)}%</span>
+            <div class="detail-comparison">
+              <div class="comparison-bar">
+                <div class="comparison-fill" style="width: ${percentage}%; background-color: ${data.color};"></div>
+              </div>
+            </div>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Rank</span>
+            <span class="detail-value small">#${data.rank} of ${data.total}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">vs Maximum</span>
+            <span class="detail-value small">${percentOfMax.toFixed(0)}%</span>
+            <div class="detail-comparison">
+              <div class="comparison-bar">
+                <div class="comparison-fill" style="width: ${percentOfMax}%; background-color: var(--oracle-primary);"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private closeDetails() {
+    this.showDetails = false;
+    this.selectedBar = null;
+    this.selectedBarData = null;
+  }
+
+  private handleBarHover(index: number | null) {
+    if (this.interactive) {
+      this.hoveredBar = index;
+    }
+  }
+
+  private handleBarClick(item: BarData, index: number, totalValue?: number) {
+    if (!this.interactive) return;
+    
+    // Toggle selection and show details
+    if (this.selectedBar === index) {
+      this.closeDetails();
+    } else {
+      this.selectedBar = index;
+      this.selectedBarData = {
+        ...item,
+        percentage: totalValue && totalValue > 0 ? (item.value / totalValue) * 100 : item.percentage
+      };
+      this.showDetails = true;
+    }
+
+    // Dispatch event
+    this.dispatchEvent(new ItemSelectEvent(item, index));
+    this.dispatchEvent(new CustomEvent('bar-select', {
+      bubbles: true,
+      composed: true,
+      detail: { bar: item, index }
+    }));
+  }
+
+  private formatValue(value: number): string {
+    if (value >= 1000000) {
+      return (value / 1000000).toFixed(1) + 'M';
+    } else if (value >= 1000) {
+      return (value / 1000).toFixed(1) + 'K';
+    }
+    return value.toLocaleString();
   }
 }
