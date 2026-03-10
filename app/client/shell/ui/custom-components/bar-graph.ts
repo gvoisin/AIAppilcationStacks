@@ -27,6 +27,7 @@ const BAR_COLORS = [
 export class BarGraph extends Root {
   @property({ attribute: false }) accessor dataPath: any = "";
   @property({ attribute: false }) accessor labelPath: any = "";
+  @property({ attribute: false }) accessor detailsPath: any = "";
   @property({ attribute: false }) accessor title: string = "Data Comparison";
   @property({ attribute: false }) accessor orientation: string = 'vertical';
   @property({ attribute: false }) accessor barWidth: number = 0.2;
@@ -111,9 +112,6 @@ export class BarGraph extends Root {
         font-size: 12px;
         font-weight: var(--font-weight-bold);
         color: var(--text-primary);
-        background: var(--surface-secondary);
-        padding: 2px 4px;
-        border-radius: var(--radius-sm);
         white-space: nowrap;
       }
 
@@ -162,7 +160,7 @@ export class BarGraph extends Root {
       }
 
       .bar-item.selected .bar {
-        box-shadow: 0 0 0 3px var(--oracle-primary), 0 0 15px rgba(136, 194, 255, 0.4);
+        /* Selection indicated by opacity and details panel, no glow */
       }
 
       .bar-item.dimmed .bar {
@@ -386,6 +384,32 @@ export class BarGraph extends Root {
         }
 
         if (Array.isArray(values) && Array.isArray(labels) && values.length === labels.length) {
+          // Parse optional details data
+          let detailsData: any[] = [];
+          if (this.detailsPath && typeof this.detailsPath === 'string') {
+            let details = this.processor.getData(this.component, this.detailsPath, this.surfaceId ?? 'default') as any;
+            if (details instanceof Map) {
+              detailsData = Array.from(details.values());
+            } else if (Array.isArray(details)) {
+              // Handle array of valueMap objects
+              detailsData = details.map((item: any) => {
+                if (item && typeof item === 'object' && 'valueMap' in item) {
+                  // Convert valueMap array to object
+                  const obj: Record<string, any> = {};
+                  if (Array.isArray(item.valueMap)) {
+                    item.valueMap.forEach((entry: any) => {
+                      if (entry.key) {
+                        obj[entry.key] = entry.valueString ?? entry.valueNumber ?? entry.valueBoolean ?? null;
+                      }
+                    });
+                  }
+                  return obj;
+                }
+                return item;
+              });
+            }
+          }
+
           const total = values.reduce((sum: number, v: any) => sum + (typeof v === 'number' ? v : parseFloat(v) || 0), 0);
           barData = labels.map((label: any, i: number) => {
             const value = typeof values[i] === 'number' ? values[i] : parseFloat(values[i]) || 0;
@@ -395,7 +419,8 @@ export class BarGraph extends Root {
               color: this.colorful ? BAR_COLORS[i % BAR_COLORS.length] : colors.oracle.primary,
               percentage: total > 0 ? (value / total) * 100 : 0,
               rank: i + 1,
-              total: values.length
+              total: values.length,
+              details: detailsData[i] || undefined
             };
           });
         }
@@ -477,8 +502,7 @@ export class BarGraph extends Root {
     if (!this.selectedBarData) return html`<div class="details-panel"></div>`;
     
     const data = this.selectedBarData;
-    const percentage = data.percentage ?? (totalValue > 0 ? (data.value / totalValue) * 100 : 0);
-    const percentOfMax = maxValue > 0 ? (data.value / maxValue) * 100 : 0;
+    const hasCustomDetails = data.details && Object.keys(data.details).length > 0;
 
     return html`
       <div class="details-panel ${this.showDetails ? 'open' : ''}">
@@ -490,31 +514,63 @@ export class BarGraph extends Root {
           <button class="details-close" @click=${this.closeDetails}>✕</button>
         </div>
         <div class="details-body">
-          <div class="detail-item">
-            <span class="detail-label">Value</span>
-            <span class="detail-value highlight">${this.formatValue(data.value)}</span>
+          ${hasCustomDetails 
+            ? this.renderCustomDetails(data.details!) 
+            : this.renderDefaultDetails(data, totalValue, maxValue)
+          }
+        </div>
+      </div>
+    `;
+  }
+
+  private renderCustomDetails(details: Record<string, any>) {
+    // Format label: convert camelCase/snake_case to Title Case
+    const formatLabel = (key: string) => {
+      return key
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/_/g, ' ')
+        .replace(/^./, s => s.toUpperCase())
+        .trim();
+    };
+
+    return Object.entries(details).map(([key, value]) => html`
+      <div class="detail-item">
+        <span class="detail-label">${formatLabel(key)}</span>
+        <span class="detail-value ${typeof value === 'number' ? 'highlight' : 'small'}">
+          ${typeof value === 'number' ? this.formatValue(value) : String(value)}
+        </span>
+      </div>
+    `);
+  }
+
+  private renderDefaultDetails(data: BarData, totalValue: number, maxValue: number) {
+    const percentage = data.percentage ?? (totalValue > 0 ? (data.value / totalValue) * 100 : 0);
+    const percentOfMax = maxValue > 0 ? (data.value / maxValue) * 100 : 0;
+
+    return html`
+      <div class="detail-item">
+        <span class="detail-label">Value</span>
+        <span class="detail-value highlight">${this.formatValue(data.value)}</span>
+      </div>
+      <div class="detail-item">
+        <span class="detail-label">Share of Total</span>
+        <span class="detail-value">${percentage.toFixed(1)}%</span>
+        <div class="detail-comparison">
+          <div class="comparison-bar">
+            <div class="comparison-fill" style="width: ${percentage}%; background-color: ${data.color};"></div>
           </div>
-          <div class="detail-item">
-            <span class="detail-label">Share of Total</span>
-            <span class="detail-value">${percentage.toFixed(1)}%</span>
-            <div class="detail-comparison">
-              <div class="comparison-bar">
-                <div class="comparison-fill" style="width: ${percentage}%; background-color: ${data.color};"></div>
-              </div>
-            </div>
-          </div>
-          <div class="detail-item">
-            <span class="detail-label">Rank</span>
-            <span class="detail-value small">#${data.rank} of ${data.total}</span>
-          </div>
-          <div class="detail-item">
-            <span class="detail-label">vs Maximum</span>
-            <span class="detail-value small">${percentOfMax.toFixed(0)}%</span>
-            <div class="detail-comparison">
-              <div class="comparison-bar">
-                <div class="comparison-fill" style="width: ${percentOfMax}%; background-color: var(--oracle-primary);"></div>
-              </div>
-            </div>
+        </div>
+      </div>
+      <div class="detail-item">
+        <span class="detail-label">Rank</span>
+        <span class="detail-value small">#${data.rank} of ${data.total}</span>
+      </div>
+      <div class="detail-item">
+        <span class="detail-label">vs Maximum</span>
+        <span class="detail-value small">${percentOfMax.toFixed(0)}%</span>
+        <div class="detail-comparison">
+          <div class="comparison-bar">
+            <div class="comparison-fill" style="width: ${percentOfMax}%; background-color: var(--oracle-primary);"></div>
           </div>
         </div>
       </div>

@@ -174,11 +174,15 @@ async def main():
             "schema": {
                 "type": "object",
                 "properties": {
-                    "dataPath": {"type": "string"},
-                    "labelPath": {"type": "string"},
+                    "dataPath": {"type": "string", "description": "Path to numeric values array"},
+                    "labelPath": {"type": "string", "description": "Path to category labels array"},
+                    "detailsPath": {"type": "string", "description": "Path to array of detail objects for each bar. Each object contains custom key-value pairs to display in the details panel."},
+                    "title": {"type": "string", "description": "Chart title text"},
                     "orientation": {"type": "string", "enum": ["vertical", "horizontal"]},
                     "barWidth": {"type": "number"},
                     "gap": {"type": "number"},
+                    "interactive": {"type": "boolean", "description": "Enable hover and click interactions"},
+                    "colorful": {"type": "boolean", "description": "Use different colors for each bar"},
                 },
                 "required": ["dataPath", "labelPath"],
             }

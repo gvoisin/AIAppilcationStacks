@@ -311,7 +311,17 @@ export class KpiCard extends Root {
   }
 
   private parseKpiData(rawData: any): KpiData | null {
+    // Standard KPI fields that should not go into details
+    const standardFields = new Set(['label', 'value', 'unit', 'change', 'changeLabel', 'icon', 'color', 'colorTheme', 'details']);
+
     if (rawData instanceof Map) {
+      const details: Record<string, any> = {};
+      // Collect non-standard fields into details
+      rawData.forEach((value, key) => {
+        if (!standardFields.has(key)) {
+          details[key] = value;
+        }
+      });
       return {
         label: rawData.get('label') || '',
         value: rawData.get('value') || 0,
@@ -319,21 +329,42 @@ export class KpiCard extends Root {
         change: rawData.get('change'),
         changeLabel: rawData.get('changeLabel'),
         icon: rawData.get('icon'),
-        color: rawData.get('color')
+        color: rawData.get('color') || rawData.get('colorTheme'),
+        details: Object.keys(details).length > 0 ? details : rawData.get('details')
       };
     } else if (rawData.valueMap) {
       const result: KpiData = { label: '', value: 0 };
+      const details: Record<string, any> = {};
       for (const kv of rawData.valueMap) {
         if (kv.key === 'label') result.label = kv.valueString || '';
-        if (kv.key === 'value') result.value = kv.valueNumber ?? kv.valueString ?? 0;
-        if (kv.key === 'unit') result.unit = kv.valueString;
-        if (kv.key === 'change') result.change = kv.valueNumber;
-        if (kv.key === 'changeLabel') result.changeLabel = kv.valueString;
-        if (kv.key === 'icon') result.icon = kv.valueString;
-        if (kv.key === 'color') result.color = kv.valueString;
+        else if (kv.key === 'value') result.value = kv.valueNumber ?? kv.valueString ?? 0;
+        else if (kv.key === 'unit') result.unit = kv.valueString;
+        else if (kv.key === 'change') result.change = kv.valueNumber;
+        else if (kv.key === 'changeLabel') result.changeLabel = kv.valueString;
+        else if (kv.key === 'icon') result.icon = kv.valueString;
+        else if (kv.key === 'color' || kv.key === 'colorTheme') result.color = kv.valueString;
+        else if (kv.key === 'details' && kv.valueMap) {
+          // Explicit details object
+          for (const detailKv of kv.valueMap) {
+            details[detailKv.key] = detailKv.valueString ?? detailKv.valueNumber ?? detailKv.valueBool;
+          }
+        } else if (!standardFields.has(kv.key)) {
+          // Non-standard fields become details (trend, forecast, breakdown, etc.)
+          details[kv.key] = kv.valueString ?? kv.valueNumber ?? kv.valueBool;
+        }
+      }
+      if (Object.keys(details).length > 0) {
+        result.details = details;
       }
       return result;
     } else if (typeof rawData === 'object') {
+      const details: Record<string, any> = {};
+      // Collect non-standard fields into details
+      for (const key of Object.keys(rawData)) {
+        if (!standardFields.has(key)) {
+          details[key] = rawData[key];
+        }
+      }
       return {
         label: rawData.label || '',
         value: rawData.value || 0,
@@ -341,7 +372,8 @@ export class KpiCard extends Root {
         change: rawData.change,
         changeLabel: rawData.changeLabel,
         icon: rawData.icon,
-        color: rawData.color
+        color: rawData.color || rawData.colorTheme,
+        details: Object.keys(details).length > 0 ? details : rawData.details
       };
     }
     return null;

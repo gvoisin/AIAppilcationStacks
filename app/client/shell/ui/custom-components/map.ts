@@ -21,7 +21,6 @@ export class MapComponent extends Root {
   @property({ attribute: false }) accessor centerLat: number = 40.7328;
   @property({ attribute: false }) accessor centerLng: number = -74.006;
   @property({ attribute: false }) accessor zoom: number = 10;
-  @property({ attribute: false }) accessor interactive: boolean = true;
   @property({ attribute: false }) accessor showInfoPanel: boolean = true;
 
   @state() accessor selectedMarker: MapMarker | null = null;
@@ -29,7 +28,6 @@ export class MapComponent extends Root {
   private map: maplibregl.Map | null = null;
   private mapContainer!: HTMLElement;
   private resizeObserver: ResizeObserver | null = null;
-  private currentPopup: maplibregl.Popup | null = null;
 
   static styles = [
     ...Root.styles,
@@ -375,26 +373,51 @@ export class MapComponent extends Root {
         if (Array.isArray(data)) {
           markers = data.map((item: any) => {
             let markerData: any = {};
+            let details: Record<string, any> = {};
 
             if (item instanceof Map) {
               // Handle A2UI Map structure: Map('name' -> 'New York', 'latitude' -> 40.7128, ...)
+              const knownKeys = ['name', 'latitude', 'lat', 'longitude', 'lng', 'description', 'status'];
               for (const [key, value] of item.entries()) {
                 if (key === 'name') markerData.name = value;
-                if (key === 'latitude' || key === 'lat') markerData.lat = value;
-                if (key === 'longitude' || key === 'lng') markerData.lng = value;
-                if (key === 'description') markerData.description = value;
+                else if (key === 'latitude' || key === 'lat') markerData.lat = value;
+                else if (key === 'longitude' || key === 'lng') markerData.lng = value;
+                else if (key === 'description') markerData.description = value;
+                else if (key === 'status') markerData.status = value;
+                else if (!knownKeys.includes(key)) {
+                  // Collect unknown keys as details
+                  details[key] = value;
+                }
               }
             } else if (typeof item === 'object') {
               if (item.lat !== undefined && item.lng !== undefined) {
-                // Handle direct structure: {lat, lng, name, description}
-                markerData = item;
+                // Handle direct structure: {lat, lng, name, description, status, details, ...}
+                markerData = { ...item };
+                // If there's a details field, use it; otherwise extract extra fields
+                if (!item.details) {
+                  const knownKeys = ['name', 'lat', 'latitude', 'lng', 'longitude', 'description', 'status', 'title', 'info'];
+                  for (const key of Object.keys(item)) {
+                    if (!knownKeys.includes(key)) {
+                      details[key] = item[key];
+                    }
+                  }
+                }
               } else if (item.valueMap && Array.isArray(item.valueMap)) {
                 // Handle A2UI structure: {valueMap: [{key: 'name', valueString: ...}, ...]}
+                const knownKeys = ['name', 'lat', 'latitude', 'lng', 'longitude', 'description', 'status'];
                 item.valueMap.forEach((entry: any) => {
-                  if (entry.key === 'name' && entry.valueString) markerData.name = entry.valueString;
-                  if ((entry.key === 'lat' || entry.key === 'latitude') && entry.valueNumber !== undefined) markerData.lat = entry.valueNumber;
-                  if ((entry.key === 'lng' || entry.key === 'longitude') && entry.valueNumber !== undefined) markerData.lng = entry.valueNumber;
-                  if (entry.key === 'description' && entry.valueString) markerData.description = entry.valueString;
+                  const key = entry.key;
+                  const value = entry.valueString ?? entry.valueNumber ?? entry.valueBoolean;
+                  
+                  if (key === 'name' && entry.valueString) markerData.name = entry.valueString;
+                  else if ((key === 'lat' || key === 'latitude') && entry.valueNumber !== undefined) markerData.lat = entry.valueNumber;
+                  else if ((key === 'lng' || key === 'longitude') && entry.valueNumber !== undefined) markerData.lng = entry.valueNumber;
+                  else if (key === 'description' && entry.valueString) markerData.description = entry.valueString;
+                  else if (key === 'status' && entry.valueString) markerData.status = entry.valueString;
+                  else if (!knownKeys.includes(key) && value !== undefined) {
+                    // Collect unknown keys as details
+                    details[key] = value;
+                  }
                 });
               }
             }
@@ -404,7 +427,9 @@ export class MapComponent extends Root {
                 name: markerData.name || markerData.title || 'Location',
                 lat: parseFloat(markerData.lat),
                 lng: parseFloat(markerData.lng),
-                description: markerData.description || markerData.info || ''
+                description: markerData.description || markerData.info || '',
+                status: markerData.status,
+                details: Object.keys(details).length > 0 ? details : (markerData.details || undefined)
               };
             }
             return null;
@@ -454,12 +479,6 @@ export class MapComponent extends Root {
       this.map.removeSource('markers');
     }
 
-    // Close any existing popup
-    if (this.currentPopup) {
-      this.currentPopup.remove();
-      this.currentPopup = null;
-    }
-
     if (markers.length > 0) {
       const geojson: GeoJSON.FeatureCollection = {
         type: "FeatureCollection",
@@ -493,52 +512,6 @@ export class MapComponent extends Root {
           "circle-stroke-width": 3,
           "circle-stroke-color": "#ffffff",
         },
-      });
-
-      // Enhanced popup on click
-      this.map.on("click", "markers-layer", (e) => {
-        if (!e.features || e.features.length === 0) return;
-        
-        const feature = e.features[0];
-        const coordinates = (feature.geometry as GeoJSON.Point).coordinates.slice() as [number, number];
-        const props = feature.properties;
-        const name = props?.name || 'Location';
-        const description = props?.description || '';
-        const status = props?.status || '';
-        const index = props?.index ?? 0;
-
-        // Select the marker in the info panel
-        const marker = markers[index];
-        if (marker) {
-          this.selectedMarker = marker;
-          this.requestUpdate();
-        }
-
-        // Create enhanced popup HTML
-        const popupContent = `
-          <div style="font-family: system-ui, sans-serif; min-width: 150px;">
-            <div style="font-weight: 600; font-size: 14px; margin-bottom: 4px;">${name}</div>
-            ${status ? `<div style="font-size: 11px; padding: 2px 6px; background: rgba(239,68,68,0.15); color: #ef4444; border-radius: 4px; display: inline-block; margin-bottom: 6px; text-transform: uppercase; font-weight: 600;">${status}</div>` : ''}
-            ${description ? `<div style="font-size: 12px; color: #666; line-height: 1.4;">${description}</div>` : ''}
-          </div>
-        `;
-
-        // Close existing popup
-        if (this.currentPopup) {
-          this.currentPopup.remove();
-        }
-
-        this.currentPopup = new maplibregl.Popup({ 
-          offset: 15,
-          closeButton: true,
-          maxWidth: '250px'
-        })
-          .setLngLat(coordinates)
-          .setHTML(popupContent)
-          .addTo(this.map!);
-
-        // Dispatch select event
-        this.dispatchEvent(new ItemSelectEvent(marker, index));
       });
 
       // Change cursor on hover

@@ -11,8 +11,9 @@ export function registerShellComponents() {
   componentRegistry.register("BarGraph", BarGraph, "bar-graph", {
     type: "object",
     properties: {
-      dataPath: { type: "string" },
-      labelPath: { type: "string" },
+      dataPath: { type: "string", description: "Path to numeric values array" },
+      labelPath: { type: "string", description: "Path to category labels array" },
+      detailsPath: { type: "string", description: "Path to array of detail objects for each bar (optional). Each object contains key-value pairs to display in the details panel when a bar is clicked." },
       title: { type: "string", description: "Chart title text" },
       orientation: { type: "string", enum: ["vertical", "horizontal"] },
       barWidth: { type: "number" },
@@ -42,14 +43,13 @@ export function registerShellComponents() {
   componentRegistry.register("MapComponent", MapComponent, "map-component", {
     type: "object",
     properties: {
-      dataPath: { type: "string" },
-      centerLat: { type: "number" },
-      centerLng: { type: "number" },
-      zoom: { type: "number" },
-      interactive: { type: "boolean", description: "Enable marker interactions" },
-      showInfoPanel: { type: "boolean", description: "Show side info panel" },
+      dataPath: { type: "string", description: "Path to array of map marker objects. Each marker object should contain: name (string), lat/latitude (number), lng/longitude (number), description (string, optional), status (string, optional), and any additional key-value pairs will be displayed as details in the side panel." },
+      centerLat: { type: "number", description: "Initial center latitude of the map" },
+      centerLng: { type: "number", description: "Initial center longitude of the map" },
+      zoom: { type: "number", description: "Initial zoom level of the map" },
+      showInfoPanel: { type: "boolean", description: "Show side info panel with marker list and details" },
     },
-    required: [],
+    required: ["dataPath"],
   });
 
   componentRegistry.register("TimelineComponent", TimelineComponent, "timeline-component", {
@@ -90,7 +90,7 @@ export function registerShellComponents() {
   componentRegistry.register("KpiCard", KpiCard, "kpi-card", {
     type: "object",
     properties: {
-      dataPath: { type: "string", description: "Path to KPI data object" },
+      dataPath: { type: "string", description: "Path to KPI data object. The data object can include: label, value, unit, change, changeLabel, icon, colorTheme, and any additional fields which will be shown as details in the pop-out panel when clicked." },
       label: { type: "string", description: "KPI label text" },
       value: { type: "number", description: "KPI value" },
       unit: { type: "string", description: "Unit suffix (e.g., %, kWh)" },
@@ -100,6 +100,11 @@ export function registerShellComponents() {
       colorTheme: { type: "string", enum: ["cyan", "coral", "teal", "yellow", "purple", "green", "pink", "orange"] },
       compact: { type: "boolean", description: "Use compact sizing" },
       clickable: { type: "boolean", description: "Enable click to show details" },
+      details: { 
+        type: "object", 
+        description: "Additional key-value pairs to display in the details pop-out panel when the KPI card is clicked. Use this to provide contextual information like trend analysis, forecasts, breakdowns, contributing factors, or any relevant extended information about the metric.",
+        additionalProperties: true
+      },
     },
     required: [],
   });
