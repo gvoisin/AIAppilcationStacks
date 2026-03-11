@@ -158,6 +158,52 @@ export class StaticModule extends LitElement {
                 { key: '4', valueString: 'Monitoring' }
               ]
             },
+            // Custom details for each bar in the chart
+            {
+              key: 'outageSummaryDetails',
+              valueMap: [
+                { key: '0', valueMap: [
+                  { key: 'status', valueString: 'Active' },
+                  { key: 'customersAffected', valueNumber: 1870 },
+                  { key: 'severityBreakdown', valueString: 'High: 5, Medium: 12, Low: 8' },
+                  { key: 'topAreas', valueString: 'Downtown, West Residential' },
+                  { key: 'mainCauses', valueString: 'Transformer failure, Cable fault' },
+                  { key: 'priority', valueString: 'Immediate response required' }
+                ]},
+                { key: '1', valueMap: [
+                  { key: 'status', valueString: 'Investigating' },
+                  { key: 'customersAffected', valueNumber: 850 },
+                  { key: 'severityBreakdown', valueString: 'High: 2, Medium: 8, Low: 5' },
+                  { key: 'topAreas', valueString: 'North Substation' },
+                  { key: 'mainCauses', valueString: 'Equipment malfunction' },
+                  { key: 'estimatedResolution', valueString: 'Under assessment' }
+                ]},
+                { key: '2', valueMap: [
+                  { key: 'status', valueString: 'Resolved' },
+                  { key: 'customersRestored', valueNumber: 5420 },
+                  { key: 'resolutionRate', valueString: '100% service restored' },
+                  { key: 'topAreas', valueString: 'East District, South Grid' },
+                  { key: 'mainCauses', valueString: 'Tree contact, Minor faults' },
+                  { key: 'avgResolutionTime', valueString: '2.5 hours' }
+                ]},
+                { key: '3', valueMap: [
+                  { key: 'status', valueString: 'Scheduled' },
+                  { key: 'plannedCustomers', valueNumber: 45 },
+                  { key: 'scheduledWindow', valueString: 'Next 48 hours' },
+                  { key: 'topAreas', valueString: 'Industrial Park' },
+                  { key: 'maintenanceType', valueString: 'Preventive maintenance' },
+                  { key: 'notificationSent', valueString: 'Yes - 72hrs advance' }
+                ]},
+                { key: '4', valueMap: [
+                  { key: 'status', valueString: 'Monitoring' },
+                  { key: 'customersWatched', valueNumber: 1200 },
+                  { key: 'monitoringLevel', valueString: 'Standard observation' },
+                  { key: 'topAreas', valueString: 'Central Grid, Harbor District' },
+                  { key: 'lastChecked', valueString: '5 minutes ago' },
+                  { key: 'alertThreshold', valueString: 'Auto-escalate if no improvement' }
+                ]}
+              ]
+            },
             // Comprehensive outage table data
             {
               key: 'outageTable',
@@ -748,6 +794,7 @@ export class StaticModule extends LitElement {
         <bar-graph
           .dataPath=${"/outageSummary"}
           .labelPath=${"/outageSummaryLabels"}
+          .detailsPath=${"/outageSummaryDetails"}
           .title=${"Outages by Status"}
           .processor=${this.processor}
           .component=${this}

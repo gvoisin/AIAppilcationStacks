@@ -21,8 +21,8 @@ async def get_traditional_outage_messages():
     outages = data["outages"]
     total_outages = data["total_outages"]
 
-    # Count outages by status
-    status_counts = {"Active": 0, "Investigating": 0, "Resolved": 0, "Scheduled": 0}
+    # Count outages by status (including Monitoring)
+    status_counts = {"Active": 0, "Investigating": 0, "Resolved": 0, "Scheduled": 0, "Monitoring": 0}
     for outage in outages:
         status = outage.get("status", "Active")
         if status in status_counts:
@@ -32,14 +32,89 @@ async def get_traditional_outage_messages():
         {"key": "0", "valueNumber": status_counts["Active"]},
         {"key": "1", "valueNumber": status_counts["Investigating"]},
         {"key": "2", "valueNumber": status_counts["Resolved"]},
-        {"key": "3", "valueNumber": status_counts["Scheduled"]}
+        {"key": "3", "valueNumber": status_counts["Scheduled"]},
+        {"key": "4", "valueNumber": status_counts["Monitoring"]}
     ]
 
     outage_summary_labels = [
         {"key": "0", "valueString": "Active"},
         {"key": "1", "valueString": "Investigating"},
         {"key": "2", "valueString": "Resolved"},
-        {"key": "3", "valueString": "Scheduled"}
+        {"key": "3", "valueString": "Scheduled"},
+        {"key": "4", "valueString": "Monitoring"}
+    ]
+
+    # Build detailed information for each status category
+    active_outages_list = [o for o in outages if o.get("status") == "Active"]
+    investigating_outages_list = [o for o in outages if o.get("status") == "Investigating"]
+    resolved_outages_list = [o for o in outages if o.get("status") == "Resolved"]
+    scheduled_outages_list = [o for o in outages if o.get("status") == "Scheduled"]
+    monitoring_outages_list = [o for o in outages if o.get("status") == "Monitoring"]
+
+    def get_top_locations(outage_list, limit=3):
+        if not outage_list:
+            return "None"
+        locations = [o["location"].split(",")[0] for o in outage_list[:limit]]
+        return ", ".join(locations)
+
+    def get_total_affected(outage_list):
+        return sum(o["affected_customers"] for o in outage_list)
+
+    def get_severity_breakdown(outage_list):
+        if not outage_list:
+            return "N/A"
+        high = len([o for o in outage_list if o.get("severity") == "High"])
+        medium = len([o for o in outage_list if o.get("severity") == "Medium"])
+        low = len([o for o in outage_list if o.get("severity") == "Low"])
+        return f"High: {high}, Medium: {medium}, Low: {low}"
+
+    def get_main_causes(outage_list, limit=2):
+        if not outage_list:
+            return "None"
+        causes = list(set([o["cause"] for o in outage_list]))[:limit]
+        return ", ".join(causes) if causes else "Various"
+
+    outage_summary_details = [
+        {"key": "0", "valueMap": [
+            {"key": "status", "valueString": "Active"},
+            {"key": "customersAffected", "valueNumber": get_total_affected(active_outages_list)},
+            {"key": "severityBreakdown", "valueString": get_severity_breakdown(active_outages_list)},
+            {"key": "topAreas", "valueString": get_top_locations(active_outages_list)},
+            {"key": "mainCauses", "valueString": get_main_causes(active_outages_list)},
+            {"key": "priority", "valueString": "Immediate response required"}
+        ]},
+        {"key": "1", "valueMap": [
+            {"key": "status", "valueString": "Investigating"},
+            {"key": "customersAffected", "valueNumber": get_total_affected(investigating_outages_list)},
+            {"key": "severityBreakdown", "valueString": get_severity_breakdown(investigating_outages_list)},
+            {"key": "topAreas", "valueString": get_top_locations(investigating_outages_list)},
+            {"key": "mainCauses", "valueString": get_main_causes(investigating_outages_list)},
+            {"key": "estimatedResolution", "valueString": "Under assessment"}
+        ]},
+        {"key": "2", "valueMap": [
+            {"key": "status", "valueString": "Resolved"},
+            {"key": "customersRestored", "valueNumber": get_total_affected(resolved_outages_list)},
+            {"key": "resolutionRate", "valueString": "100% service restored"},
+            {"key": "topAreas", "valueString": get_top_locations(resolved_outages_list)},
+            {"key": "mainCauses", "valueString": get_main_causes(resolved_outages_list)},
+            {"key": "avgResolutionTime", "valueString": "2.5 hours"}
+        ]},
+        {"key": "3", "valueMap": [
+            {"key": "status", "valueString": "Scheduled"},
+            {"key": "plannedCustomers", "valueNumber": get_total_affected(scheduled_outages_list)},
+            {"key": "scheduledWindow", "valueString": "Next 48 hours"},
+            {"key": "topAreas", "valueString": get_top_locations(scheduled_outages_list)},
+            {"key": "maintenanceType", "valueString": "Preventive maintenance"},
+            {"key": "notificationSent", "valueString": "Yes - 72hrs advance"}
+        ]},
+        {"key": "4", "valueMap": [
+            {"key": "status", "valueString": "Monitoring"},
+            {"key": "customersWatched", "valueNumber": get_total_affected(monitoring_outages_list)},
+            {"key": "monitoringLevel", "valueString": "Standard observation"},
+            {"key": "topAreas", "valueString": get_top_locations(monitoring_outages_list)},
+            {"key": "lastChecked", "valueString": "5 minutes ago"},
+            {"key": "alertThreshold", "valueString": "Auto-escalate if no improvement"}
+        ]}
     ]
 
     outage_table = []
@@ -147,6 +222,10 @@ async def get_traditional_outage_messages():
                     {
                         "key": "outageSummaryLabels",
                         "valueMap": outage_summary_labels
+                    },
+                    {
+                        "key": "outageSummaryDetails",
+                        "valueMap": outage_summary_details
                     },
                     {
                         "key": "outageTable",

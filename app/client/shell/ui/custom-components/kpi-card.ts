@@ -537,6 +537,7 @@ export class KpiCardGroup extends Root {
               .icon=${item.icon || ''}
               .colorTheme=${item.color || colors[idx % colors.length]}
               .compact=${this.compact}
+              .details=${item.details || {}}
             ></kpi-card>
           `)}
         </div>
@@ -545,7 +546,16 @@ export class KpiCardGroup extends Root {
   }
 
   private parseItem(item: any, idx: number): KpiData | null {
+    // Standard KPI fields that should not go into details
+    const standardFields = new Set(['label', 'value', 'unit', 'change', 'changeLabel', 'icon', 'color', 'colorTheme', 'details']);
+
     if (item instanceof Map) {
+      const details: Record<string, any> = {};
+      item.forEach((value, key) => {
+        if (!standardFields.has(key)) {
+          details[key] = value;
+        }
+      });
       return {
         label: item.get('label') || `KPI ${idx + 1}`,
         value: item.get('value') || 0,
@@ -553,21 +563,40 @@ export class KpiCardGroup extends Root {
         change: item.get('change'),
         changeLabel: item.get('changeLabel'),
         icon: item.get('icon'),
-        color: item.get('color')
+        color: item.get('color') || item.get('colorTheme'),
+        details: Object.keys(details).length > 0 ? details : item.get('details')
       };
     } else if (item.valueMap) {
       const result: KpiData = { label: `KPI ${idx + 1}`, value: 0 };
+      const details: Record<string, any> = {};
       for (const kv of item.valueMap) {
         if (kv.key === 'label') result.label = kv.valueString || result.label;
-        if (kv.key === 'value') result.value = kv.valueNumber ?? kv.valueString ?? 0;
-        if (kv.key === 'unit') result.unit = kv.valueString;
-        if (kv.key === 'change') result.change = kv.valueNumber;
-        if (kv.key === 'changeLabel') result.changeLabel = kv.valueString;
-        if (kv.key === 'icon') result.icon = kv.valueString;
-        if (kv.key === 'color') result.color = kv.valueString;
+        else if (kv.key === 'value') result.value = kv.valueNumber ?? kv.valueString ?? 0;
+        else if (kv.key === 'unit') result.unit = kv.valueString;
+        else if (kv.key === 'change') result.change = kv.valueNumber;
+        else if (kv.key === 'changeLabel') result.changeLabel = kv.valueString;
+        else if (kv.key === 'icon') result.icon = kv.valueString;
+        else if (kv.key === 'color' || kv.key === 'colorTheme') result.color = kv.valueString;
+        else if (kv.key === 'details' && kv.valueMap) {
+          for (const detailKv of kv.valueMap) {
+            details[detailKv.key] = detailKv.valueString ?? detailKv.valueNumber ?? detailKv.valueBool;
+          }
+        } else if (!standardFields.has(kv.key)) {
+          // Non-standard fields become details (trend, forecast, breakdown, etc.)
+          details[kv.key] = kv.valueString ?? kv.valueNumber ?? kv.valueBool;
+        }
+      }
+      if (Object.keys(details).length > 0) {
+        result.details = details;
       }
       return result;
     } else if (typeof item === 'object') {
+      const details: Record<string, any> = {};
+      for (const key of Object.keys(item)) {
+        if (!standardFields.has(key)) {
+          details[key] = item[key];
+        }
+      }
       return {
         label: item.label || `KPI ${idx + 1}`,
         value: item.value || 0,
@@ -575,7 +604,8 @@ export class KpiCardGroup extends Root {
         change: item.change,
         changeLabel: item.changeLabel,
         icon: item.icon,
-        color: item.color
+        color: item.color || item.colorTheme,
+        details: Object.keys(details).length > 0 ? details : item.details
       };
     }
     return null;

@@ -388,24 +388,49 @@ export class BarGraph extends Root {
           let detailsData: any[] = [];
           if (this.detailsPath && typeof this.detailsPath === 'string') {
             let details = this.processor.getData(this.component, this.detailsPath, this.surfaceId ?? 'default') as any;
-            if (details instanceof Map) {
-              detailsData = Array.from(details.values());
+            
+            // Helper to check if value is Map-like (works with SignalMap too)
+            const isMapLike = (val: any): boolean => {
+              return val && typeof val.get === 'function' && typeof val.values === 'function' && typeof val.forEach === 'function';
+            };
+            
+            // Helper function to recursively convert Map-like objects to plain object
+            const mapToObject = (mapOrValue: any): any => {
+              if (isMapLike(mapOrValue)) {
+                const obj: Record<string, any> = {};
+                mapOrValue.forEach((value: any, key: string) => {
+                  obj[key] = mapToObject(value);
+                });
+                return obj;
+              }
+              return mapOrValue;
+            };
+
+            // Convert top-level Map-like to array of values
+            if (isMapLike(details)) {
+              detailsData = Array.from(details.values()).map(mapToObject);
             } else if (Array.isArray(details)) {
-              // Handle array of valueMap objects
+              // Process each item - might be objects with valueMap arrays
               detailsData = details.map((item: any) => {
-                if (item && typeof item === 'object' && 'valueMap' in item) {
-                  // Convert valueMap array to object
-                  const obj: Record<string, any> = {};
-                  if (Array.isArray(item.valueMap)) {
+                if (item && typeof item === 'object') {
+                  // Check if item has valueMap property (raw A2UI JSON format)
+                  if ('valueMap' in item && Array.isArray(item.valueMap)) {
+                    const obj: Record<string, any> = {};
                     item.valueMap.forEach((entry: any) => {
-                      if (entry.key) {
+                      if (entry && entry.key) {
                         obj[entry.key] = entry.valueString ?? entry.valueNumber ?? entry.valueBoolean ?? null;
                       }
                     });
+                    return obj;
                   }
-                  return obj;
+                  // Check if item itself is Map-like
+                  if (isMapLike(item)) {
+                    return mapToObject(item);
+                  }
+                  // Already a proper object
+                  return item;
                 }
-                return item;
+                return {};
               });
             }
           }
