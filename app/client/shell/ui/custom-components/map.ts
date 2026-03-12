@@ -144,22 +144,33 @@ export class MapComponent extends Root {
         margin-top: var(--space-sm);
         padding-top: var(--space-sm);
         border-top: 1px dashed var(--border-subtle);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-xs);
       }
 
       .marker-detail-item {
-        display: flex;
-        justify-content: space-between;
+        display: grid;
+        grid-template-columns: minmax(70px, 38%) minmax(0, 1fr);
+        align-items: start;
+        column-gap: var(--space-sm);
         font-size: 12px;
-        margin-bottom: 4px;
+        padding: 2px 0;
       }
 
       .marker-detail-label {
         color: var(--text-secondary);
+        line-height: 1.35;
       }
 
       .marker-detail-value {
         color: var(--text-primary);
         font-weight: var(--font-weight-medium);
+        line-height: 1.4;
+        min-width: 0;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        text-align: left;
       }
 
       .marker-action-btn {
