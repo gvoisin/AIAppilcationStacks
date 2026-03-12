@@ -165,15 +165,18 @@ MAP COMPONENT DETAILS:
 
 LINE GRAPH DETAILS (FUTURE-PROOF):
 - Add series-level contextual information
+- When using LineGraph, provide a detailsPath and a matching per-label details dataset
 - Include: trend, forecast, seasonality, anomalies, correlation, drivers
 - Structure details within series data for future expansion
 
 TABLE DETAILS (FUTURE-PROOF):
 - Include rich row-level context and explanations
+- When using Table, provide a detailsPath and a matching details dataset aligned by row index
 - Add metadata, explanations, relationships, historical context
 - Structure details within row data for future expansion
 
 TIMELINE DETAILS (FUTURE-PROOF):
+- When using TimelineComponent, provide a detailsPath and a matching details dataset aligned by event index
 - Add comprehensive event information
 - Include: impact, resolution, followUp, stakeholders, lessonsLearned
 - Structure details within event data for future expansion

@@ -18,6 +18,7 @@ interface TableRecord {
 @customElement('data-table')
 export class Table extends Root {
   @property({ attribute: false }) accessor dataPath: any = "";
+  @property({ attribute: false }) accessor detailsPath: any = "";
   @property({ attribute: false }) accessor title: string = "Data Table";
   @property({ attribute: false }) accessor columns: TableColumn[] = [];
   @property({ attribute: false }) accessor showPagination: boolean = false;
@@ -28,6 +29,7 @@ export class Table extends Root {
   @state() accessor expandedRows: Set<number> = new Set();
   @state() accessor selectedRow: number | null = null;
   @state() accessor selectedRecord: TableRecord | null = null;
+  @state() accessor selectedDetails: TableRecord | null = null;
 
   static styles = [
     ...Root.styles,
@@ -368,41 +370,8 @@ export class Table extends Root {
   ];
 
   render() {
-    let tableData: TableRecord[] = [];
-
-    // Resolve dataPath
-    if (this.dataPath && typeof this.dataPath === 'string' && this.processor) {
-      let rawData = this.processor.getData(this.component, this.dataPath, this.surfaceId ?? 'default') as any;
-
-      if (rawData instanceof Map) {
-        rawData = Array.from(rawData.values());
-      }
-
-      if (Array.isArray(rawData)) {
-        tableData = rawData.map((item: any) => {
-          const record: TableRecord = {};
-
-          // Handle valueMap format
-          if (item.valueMap) {
-            for (const kv of item.valueMap) {
-              if (kv.key && kv.valueString !== undefined) {
-                record[kv.key] = kv.valueString;
-              } else if (kv.key && kv.valueNumber !== undefined) {
-                record[kv.key] = kv.valueNumber;
-              }
-            }
-          } else if (item instanceof Map) {
-            for (const [key, value] of item) {
-              record[key] = value;
-            }
-          } else if (typeof item === 'object') {
-            Object.assign(record, item);
-          }
-
-          return record;
-        });
-      }
-    }
+    const tableData = this.parseRecordsFromPath(this.dataPath);
+    const detailData = this.parseRecordsFromPath(this.detailsPath);
 
     if (!this.columns || this.columns.length === 0) {
       return html`
@@ -428,7 +397,7 @@ export class Table extends Root {
         <div class="table-container table-with-panel">
           <div class="table-main">
             <div class="table-title">${this.title}</div>
-            ${this.renderTable(tableData)}
+            ${this.renderTable(tableData, detailData)}
           </div>
           ${this.renderDetailPanel()}
         </div>
@@ -438,7 +407,7 @@ export class Table extends Root {
     return html`
       <div class="table-container">
         <div class="table-title">${this.title}</div>
-        ${this.renderTable(tableData)}
+        ${this.renderTable(tableData, detailData)}
         <div class="table-footer">
           <span class="record-count">${tableData.length} record${tableData.length !== 1 ? 's' : ''} total</span>
         </div>
@@ -446,7 +415,7 @@ export class Table extends Root {
     `;
   }
 
-  private renderTable(tableData: TableRecord[]) {
+  private renderTable(tableData: TableRecord[], detailData: TableRecord[]) {
     return html`
       <div class="table-wrapper">
         <table>
@@ -457,7 +426,7 @@ export class Table extends Root {
             </tr>
           </thead>
           <tbody>
-            ${tableData.map((record, index) => this.renderRow(record, index))}
+            ${tableData.map((record, index) => this.renderRow(record, index, detailData[index]))}
           </tbody>
         </table>
       </div>
@@ -465,7 +434,8 @@ export class Table extends Root {
   }
 
   private renderDetailPanel() {
-    if (!this.selectedRecord) {
+    const detailSource = this.getDetailSource(this.selectedRecord, this.selectedDetails);
+    if (!detailSource) {
       return html`
         <div class="detail-panel">
           <div class="detail-panel-header">
@@ -483,7 +453,7 @@ export class Table extends Root {
           <button class="detail-panel-close" @click=${this.clearSelection}>×</button>
         </div>
         <div class="expanded-grid">
-          ${Object.entries(this.selectedRecord).map(([key, value]) => html`
+          ${Object.entries(detailSource).map(([key, value]) => html`
             <div class="expanded-field">
               <span class="expanded-label">${this.formatFieldLabel(key)}</span>
               <span class="expanded-value">${this.formatFieldValue(key, value)}</span>
@@ -494,14 +464,14 @@ export class Table extends Root {
     `;
   }
 
-  private renderRow(record: TableRecord, index: number) {
+  private renderRow(record: TableRecord, index: number, details?: TableRecord) {
     const isExpanded = this.expandedRows.has(index);
     const isSelected = this.selectedRow === index;
 
     return html`
       <tr 
         class="${this.expandable ? 'clickable' : ''} ${isExpanded ? 'expanded' : ''} ${isSelected ? 'selected' : ''}"
-        @click=${() => this.handleRowClick(record, index)}
+        @click=${() => this.handleRowClick(record, index, details)}
       >
         ${this.expandable ? html`
           <td>
@@ -510,11 +480,28 @@ export class Table extends Root {
         ` : ''}
         ${this.columns.map(column => this.renderCell(record, column))}
       </tr>
-      ${isExpanded ? this.renderExpandedContent(record) : ''}
+      ${isExpanded ? this.renderExpandedContent(record, details) : ''}
     `;
   }
 
-  private renderExpandedContent(record: TableRecord) {
+  private renderExpandedContent(record: TableRecord, details?: TableRecord) {
+    if (details && Object.keys(details).length > 0) {
+      return html`
+        <tr class="expanded-content">
+          <td colspan="${this.columns.length + (this.expandable ? 1 : 0)}">
+            <div class="expanded-grid">
+              ${Object.entries(details).map(([key, value]) => html`
+                <div class="expanded-field">
+                  <span class="expanded-label">${this.formatFieldLabel(key)}</span>
+                  <span class="expanded-value">${this.formatFieldValue(key, value)}</span>
+                </div>
+              `)}
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
     // Get all fields that are not in the main columns
     const displayedFields = new Set(this.columns.map(c => c.field));
     const extraFields = Object.entries(record).filter(([key]) => !displayedFields.has(key));
@@ -538,10 +525,11 @@ export class Table extends Root {
     `;
   }
 
-  private handleRowClick(record: TableRecord, index: number) {
+  private handleRowClick(record: TableRecord, index: number, details?: TableRecord) {
     if (this.showDetailPanel) {
       this.selectedRow = index;
       this.selectedRecord = record;
+      this.selectedDetails = details ?? null;
     }
     // Dispatch event for parent components
     this.dispatchEvent(new ItemSelectEvent(record, index));
@@ -560,6 +548,75 @@ export class Table extends Root {
   private clearSelection() {
     this.selectedRow = null;
     this.selectedRecord = null;
+    this.selectedDetails = null;
+  }
+
+  private getDetailSource(record: TableRecord | null, details: TableRecord | null | undefined): TableRecord | null {
+    if (details && Object.keys(details).length > 0) {
+      return details;
+    }
+    return record;
+  }
+
+  private isMapLike(value: any): boolean {
+    return !!value
+      && typeof value.get === 'function'
+      && typeof value.values === 'function'
+      && typeof value.forEach === 'function';
+  }
+
+  private mapToObject(mapOrValue: any): any {
+    if (this.isMapLike(mapOrValue)) {
+      const obj: Record<string, any> = {};
+      mapOrValue.forEach((value: any, key: string) => {
+        obj[key] = this.mapToObject(value);
+      });
+      return obj;
+    }
+    return mapOrValue;
+  }
+
+  private parseRecordItem(item: any): TableRecord {
+    const record: TableRecord = {};
+
+    if (!item || typeof item !== 'object') {
+      return record;
+    }
+
+    if ('valueMap' in item && Array.isArray(item.valueMap)) {
+      for (const kv of item.valueMap) {
+        if (!kv || !kv.key) continue;
+        if (kv.valueString !== undefined) {
+          record[kv.key] = kv.valueString;
+        } else if (kv.valueNumber !== undefined) {
+          record[kv.key] = kv.valueNumber;
+        } else if (kv.valueBoolean !== undefined) {
+          record[kv.key] = kv.valueBoolean;
+        }
+      }
+      return record;
+    }
+
+    if (this.isMapLike(item)) {
+      return this.mapToObject(item);
+    }
+
+    Object.assign(record, item);
+    return record;
+  }
+
+  private parseRecordsFromPath(path: any): TableRecord[] {
+    if (!path || typeof path !== 'string' || !this.processor) return [];
+
+    let rawData = this.processor.getData(this.component, path, this.surfaceId ?? 'default') as any;
+
+    if (this.isMapLike(rawData)) {
+      rawData = Array.from(rawData.values());
+    }
+
+    if (!Array.isArray(rawData)) return [];
+
+    return rawData.map((item: any) => this.parseRecordItem(item));
   }
 
   private formatFieldLabel(key: string): string {

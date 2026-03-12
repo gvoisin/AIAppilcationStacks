@@ -1,5 +1,7 @@
 WIDGET_NAME = "LineGraph"
-WIDGET_DESCRIPTION = "component designed to display line charts with multiple series, showing trends over time or categories. Requires x-axis labels and series data with names, colors, and value arrays."
+WIDGET_DESCRIPTION = """Component designed to display line charts with multiple series, showing trends over time or categories.
+REQUIRED: labelPath (x-axis labels), seriesPath (series with name, color, values).
+OPTIONAL: detailsPath (array of custom detail objects aligned by x-axis index; shown when a point is selected), title, showPoints, showArea, animated, interactive."""
 WIDGET_SCHEMA = """
 [
   {{ "beginRendering": {{ "surfaceId": "line-chart-view","root": "main-container" }} }},
@@ -10,6 +12,7 @@ WIDGET_SCHEMA = """
         {{ "id": "line-chart", "component": {{ "LineGraph": {{
           "labelPath": "/lineLabels",
           "seriesPath": "/lineSeries",
+          "detailsPath": "/lineDetails",
           "title": "Outage Trends Over Time",
           "showPoints": true,
           "showArea": true,
@@ -88,6 +91,27 @@ WIDGET_SCHEMA = """
                     {{ "key": "5", "valueNumber": 35 }}
                   ]
                 }}
+              ]
+            }}
+          ]
+        }},
+        {{
+          "key": "lineDetails",
+          "valueMap": [
+            {{
+              "key": "0",
+              "valueMap": [
+                {{ "key": "periodSummary", "valueString": "Baseline quarter" }},
+                {{ "key": "mainDriver", "valueString": "Normal operating load" }},
+                {{ "key": "forecast", "valueString": "Stable next month" }}
+              ]
+            }},
+            {{
+              "key": "1",
+              "valueMap": [
+                {{ "key": "periodSummary", "valueString": "Seasonal increase" }},
+                {{ "key": "mainDriver", "valueString": "Weather-related demand" }},
+                {{ "key": "forecast", "valueString": "Slight increase expected" }}
               ]
             }}
           ]

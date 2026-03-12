@@ -30,6 +30,7 @@ export function registerShellComponents() {
       dataPath: { type: "string", description: "Path to single series data (for backward compatibility)" },
       labelPath: { type: "string", description: "Path to x-axis labels array" },
       seriesPath: { type: "string", description: "Path to array of series objects [{name, values, color}]" },
+      detailsPath: { type: "string", description: "Path to array of detail objects for each x-axis point (optional). Each object provides custom details shown when a point is selected." },
       title: { type: "string", description: "Chart title text" },
       showPoints: { type: "boolean", description: "Show data points on the line" },
       showArea: { type: "boolean", description: "Fill area under the line" },
@@ -56,7 +57,9 @@ export function registerShellComponents() {
     type: "object",
     properties: {
       dataPath: { type: "string" },
+      detailsPath: { type: "string", description: "Path to array of detail objects for each timeline event (optional), aligned by event index." },
       expandable: { type: "boolean", description: "Enable expandable detail panels" },
+      compactPreview: { type: "boolean", description: "Keep collapsed event cards concise and move description to the expanded panel (default true)." },
     },
     required: [],
   });
@@ -65,6 +68,7 @@ export function registerShellComponents() {
     type: "object",
     properties: {
       dataPath: { type: "string", description: "Path to array of table records" },
+      detailsPath: { type: "string", description: "Path to array of detail objects for each row (optional). Each object contains key-value pairs shown in expanded row/details panel." },
       title: { type: "string", description: "Table title" },
       columns: {
         type: "array",

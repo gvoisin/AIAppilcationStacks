@@ -16,7 +16,9 @@ interface TimelineEvent {
 @customElement('timeline-component')
 export class TimelineComponent extends Root {
   @property({ attribute: false }) accessor dataPath: any = "";
+  @property({ attribute: false }) accessor detailsPath: any = "";
   @property({ attribute: false }) accessor expandable: boolean = true;
+  @property({ attribute: false }) accessor compactPreview: boolean = true;
 
   @state() accessor expandedItems: Set<number> = new Set();
 
@@ -235,61 +237,97 @@ export class TimelineComponent extends Root {
   }
 
   private getEvents(): TimelineEvent[] {
-    let events: TimelineEvent[] = [];
+    const events: TimelineEvent[] = [];
+    const eventRecords = this.parseRecordsFromPath(this.dataPath);
+    const detailRecords = this.parseRecordsFromPath(this.detailsPath);
 
-    if (this.dataPath && typeof this.dataPath === 'string') {
-      if (this.processor) {
-        let data = this.processor.getData(this.component, this.dataPath, this.surfaceId ?? 'default') as any;
+    eventRecords.forEach((eventData, index) => {
+      if (!eventData.date) return;
 
-        if (data instanceof Map) {
-          data = Array.from(data.values());
-        }
+      const mainKeys = new Set(['date', 'title', 'description', 'category', 'color']);
+      const fallbackDetails = Object.fromEntries(
+        Object.entries(eventData).filter(([key]) => !mainKeys.has(key))
+      );
+      const details = detailRecords[index] && Object.keys(detailRecords[index]).length > 0
+        ? detailRecords[index]
+        : fallbackDetails;
 
-        if (Array.isArray(data)) {
-          events = data.map((item: any) => {
-            let eventData: any = {};
-
-            if (item instanceof Map) {
-              // Handle A2UI Map structure: Map('date' -> '2023-01-15', 'title' -> 'Project Start', ...)
-              for (const [key, value] of item.entries()) {
-                if (key === 'date') eventData.date = value;
-                if (key === 'title') eventData.title = value;
-                if (key === 'description') eventData.description = value;
-                if (key === 'category') eventData.category = value;
-              }
-            } else if (typeof item === 'object' && item.valueMap && Array.isArray(item.valueMap)) {
-              // Handle A2UI structure: {valueMap: [{key: 'date', valueString: ...}, ...]}
-              item.valueMap.forEach((entry: any) => {
-                if (entry.key === 'date' && entry.valueString) eventData.date = entry.valueString;
-                if (entry.key === 'title' && entry.valueString) eventData.title = entry.valueString;
-                if (entry.key === 'description' && entry.valueString) eventData.description = entry.valueString;
-                if (entry.key === 'category' && entry.valueString) eventData.category = entry.valueString;
-              });
-            }
-
-            if (eventData.date) {
-              return {
-                date: eventData.date,
-                title: eventData.title || 'Event',
-                description: eventData.description || '',
-                category: eventData.category || 'Event',
-                color: colors.semantic.success
-              };
-            }
-            return null;
-          }).filter(Boolean) as TimelineEvent[];
-        }
-      }
-    }
+      events.push({
+        date: String(eventData.date),
+        title: String(eventData.title || 'Event'),
+        description: eventData.description ? String(eventData.description) : '',
+        category: eventData.category ? String(eventData.category) : 'Event',
+        color: eventData.color ? String(eventData.color) : colors.semantic.success,
+        details: Object.keys(details).length > 0 ? details : undefined
+      });
+    });
 
     events.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
     return events;
   }
 
+  private isMapLike(value: any): boolean {
+    return !!value
+      && typeof value.get === 'function'
+      && typeof value.values === 'function'
+      && typeof value.forEach === 'function';
+  }
+
+  private mapToObject(mapOrValue: any): any {
+    if (this.isMapLike(mapOrValue)) {
+      const obj: Record<string, any> = {};
+      mapOrValue.forEach((value: any, key: string) => {
+        obj[key] = this.mapToObject(value);
+      });
+      return obj;
+    }
+    return mapOrValue;
+  }
+
+  private parseRecordItem(item: any): Record<string, any> {
+    const record: Record<string, any> = {};
+    if (!item || typeof item !== 'object') return record;
+
+    if ('valueMap' in item && Array.isArray(item.valueMap)) {
+      for (const kv of item.valueMap) {
+        if (!kv || !kv.key) continue;
+        if (kv.valueString !== undefined) {
+          record[kv.key] = kv.valueString;
+        } else if (kv.valueNumber !== undefined) {
+          record[kv.key] = kv.valueNumber;
+        } else if (kv.valueBoolean !== undefined) {
+          record[kv.key] = kv.valueBoolean;
+        } else if (kv.valueMap !== undefined) {
+          record[kv.key] = this.mapToObject(kv.valueMap);
+        }
+      }
+      return record;
+    }
+
+    if (this.isMapLike(item)) {
+      return this.mapToObject(item);
+    }
+
+    return { ...item };
+  }
+
+  private parseRecordsFromPath(path: any): Record<string, any>[] {
+    if (!path || typeof path !== 'string' || !this.processor) return [];
+
+    let data = this.processor.getData(this.component, path, this.surfaceId ?? 'default') as any;
+    if (this.isMapLike(data)) {
+      data = Array.from(data.values());
+    }
+    if (!Array.isArray(data)) return [];
+
+    return data.map((item: any) => this.parseRecordItem(item));
+  }
+
   private renderTimelineItem(event: TimelineEvent, index: number) {
     const formattedDate = this.formatDate(event.date);
     const isExpanded = this.expandedItems.has(index);
+    const showInlineDescription = !this.expandable || !this.compactPreview;
 
     return html`
       <div class="timeline-item" style="--event-color: ${event.color}">
@@ -306,12 +344,18 @@ export class TimelineComponent extends Root {
               <span class="expand-toggle ${isExpanded ? 'expanded' : ''}">▶</span>
             ` : ''}
           </div>
-          ${event.description ? html`<div class="timeline-description">${event.description}</div>` : ''}
+          ${showInlineDescription && event.description ? html`<div class="timeline-description">${event.description}</div>` : ''}
           ${event.category ? html`<div class="timeline-category">${event.category}</div>` : ''}
           
           ${this.expandable ? html`
             <div class="timeline-expanded-details ${isExpanded ? 'open' : ''}">
               <div class="timeline-detail-grid">
+                ${event.description ? html`
+                  <div class="timeline-detail-item">
+                    <span class="timeline-detail-label">Description</span>
+                    <span class="timeline-detail-value">${event.description}</span>
+                  </div>
+                ` : ''}
                 <div class="timeline-detail-item">
                   <span class="timeline-detail-label">Full Date</span>
                   <span class="timeline-detail-value">${this.formatFullDate(event.date)}</span>

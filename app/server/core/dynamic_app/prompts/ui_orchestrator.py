@@ -24,7 +24,7 @@ COMPONENT SELECTION RULES:
 - MULTI-COMPONENT APPROACH: Select 2-4 complementary components that together provide comprehensive insights
 - VISUALIZATION STRATEGY by data type:
   * Location/coordinate data: Use map components + comparative charts + key metrics
-  * Comparisons/aggregations: Use bar charts + KPI cards + data tables
+  * Comparisons/aggregations: Use bar charts / Line charts + KPI cards + data tables
   * Time-series sequences: Use line graphs + timeline components + trend indicators
   * Lists/details: Use data tables + location maps + summary cards
   * Key metrics: Use KPI cards + comparative visualizations + trend charts
@@ -51,12 +51,12 @@ COMPONENTS: component1, component2, component3
 
 EXAMPLES for CURRENT DATA DOMAIN:
 For outage location queries: COMPONENTS: MapComponent, TimelineComponent, text
-For infrastructure comparisons: COMPONENTS: BarGraph, Table, KpiCard
+For infrastructure comparisons: COMPONENTS: BarGraph / LineGraph, Table, KpiCard
 For disaster procedures: COMPONENTS: TimelineComponent, text, card
 For explanations, secuencial steps, textual information: COMPONENTS: TimelineComponent
 For no data (inappropriate): COMPONENTS: text, card
 For no data (non-related): COMPONENTS: text, card
-For asset condition analysis: COMPONENTS: KpiCard, BarGraph, MapComponent
+For asset condition analysis: COMPONENTS: KpiCard, BarGraph/LineGraph, MapComponent
 
 Do not include any other text or explanation. Just the component list.
 """

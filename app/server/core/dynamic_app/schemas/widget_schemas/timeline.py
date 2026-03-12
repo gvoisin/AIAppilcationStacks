@@ -1,5 +1,7 @@
 WIDGET_NAME = "TimelineComponent"
-WIDGET_DESCRIPTION = "component designed to show the history of events ocurred over a time span. Requires good time definition and description of events."
+WIDGET_DESCRIPTION = """Component designed to show events over time.
+REQUIRED: dataPath with core timeline fields (date, title, optional description/category).
+OPTIONAL: detailsPath (array of custom detail objects aligned by event index for expanded panel), expandable, compactPreview (keep collapsed cards concise and show description in expanded panel)."""
 WIDGET_SCHEMA = """
 [
   {{ "beginRendering": {{ "surfaceId": "timeline-view","root": "main-column" }} }},
@@ -8,7 +10,7 @@ WIDGET_SCHEMA = """
       "components": [
         {{ "id": "main-column", "component": {{ "Column": {{ "children": {{ "explicitList": ["title", "event-timeline"] }} }} }} }},
         {{ "id": "title","component": {{ "Text": {{ "usageHint": "h2", "text": {{ "literalString": "Event Timeline" }} }} }} }},
-        {{ "id": "event-timeline", "component": {{ "TimelineComponent": {{ "dataPath": "/timelineData" }} }} }}
+        {{ "id": "event-timeline", "component": {{ "TimelineComponent": {{ "dataPath": "/timelineData", "detailsPath": "/timelineDetails", "expandable": true, "compactPreview": true }} }} }}
       ]
     }}
   }},
@@ -59,6 +61,27 @@ WIDGET_SCHEMA = """
                   "key": "category",
                   "valueString": "Release"
                 }}
+              ]
+            }}
+          ]
+        }},
+        {{
+          "key": "timelineDetails",
+          "valueMap": [
+            {{
+              "key": "0",
+              "valueMap": [
+                {{ "key": "owner", "valueString": "Program Management" }},
+                {{ "key": "impact", "valueString": "Project officially started" }},
+                {{ "key": "nextMilestone", "valueString": "Requirements freeze" }}
+              ]
+            }},
+            {{
+              "key": "1",
+              "valueMap": [
+                {{ "key": "owner", "valueString": "Release Engineering" }},
+                {{ "key": "impact", "valueString": "Beta feedback collection began" }},
+                {{ "key": "nextMilestone", "valueString": "General availability prep" }}
               ]
             }}
           ]

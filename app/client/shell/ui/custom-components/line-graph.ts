@@ -9,6 +9,10 @@ interface SeriesData {
   color: string;
 }
 
+interface DetailRecord {
+  [key: string]: any;
+}
+
 interface ChartPoint {
   x: number;
   y: number;
@@ -42,6 +46,7 @@ export class LineGraph extends Root {
   @property({ attribute: false }) accessor dataPath: any = "";
   @property({ attribute: false }) accessor labelPath: any = "";
   @property({ attribute: false }) accessor seriesPath: any = "";
+  @property({ attribute: false }) accessor detailsPath: any = "";
   @property({ attribute: false }) accessor title: string = "Trend Analysis";
   @property({ attribute: false }) accessor showPoints: boolean = true;
   @property({ attribute: false }) accessor showArea: boolean = false;
@@ -53,7 +58,7 @@ export class LineGraph extends Root {
   @state() accessor selectedPoint: ChartPoint | null = null;
   @state() accessor hoveredSeries: string | null = null;
   @state() accessor showDetails: boolean = false;
-  @state() accessor detailsData: { point: ChartPoint, series: SeriesData, allSeries: SeriesData[] } | null = null;
+  @state() accessor detailsData: { point: ChartPoint, series: SeriesData, allSeries: SeriesData[], customDetails?: DetailRecord } | null = null;
 
   static styles = [
     ...Root.styles,
@@ -470,6 +475,7 @@ export class LineGraph extends Root {
   render() {
     let series: SeriesData[] = [];
     let labels: string[] = [];
+    let details: DetailRecord[] = [];
 
     // Resolve dataPath, labelPath, and seriesPath
     if (this.processor) {
@@ -568,6 +574,10 @@ export class LineGraph extends Root {
           series = [{ name: 'Data', values: numericValues, color: SERIES_COLORS[0] }];
         }
       }
+
+      if (this.detailsPath && typeof this.detailsPath === 'string') {
+        details = this.parseRecordsFromPath(this.detailsPath);
+      }
     }
 
     if (series.length === 0 || labels.length === 0) {
@@ -635,7 +645,7 @@ export class LineGraph extends Root {
                 ` : ''}
                 
                 <!-- Render each series -->
-                ${series.map((s, seriesIdx) => this.renderSeries(s, seriesPoints[seriesIdx], chartHeight, minValue, paddedRange, seriesIdx))}
+                ${series.map((s, seriesIdx) => this.renderSeries(s, seriesPoints[seriesIdx], chartHeight, minValue, paddedRange, seriesIdx, details))}
               </svg>
               
               <!-- Tooltip -->
@@ -679,11 +689,10 @@ export class LineGraph extends Root {
 
   private renderDetailsPanel(allSeries: SeriesData[], _labels: string[]) {
     if (!this.detailsData) return html`<div class="details-panel"></div>`;
-    
-    const { point, series } = this.detailsData;
+
+    const { point, series, customDetails } = this.detailsData;
     const pointIndex = point.index ?? 0;
-    
-    // Get values from all series at this index
+
     const comparisonData = allSeries
       .filter(s => s.name !== series.name)
       .map(s => ({
@@ -691,14 +700,14 @@ export class LineGraph extends Root {
         color: s.color,
         value: s.values[pointIndex] ?? 0
       }));
-    
-    // Calculate stats
+
     const seriesValues = series.values;
     const avg = seriesValues.reduce((a, b) => a + b, 0) / seriesValues.length;
     const max = Math.max(...seriesValues);
     const min = Math.min(...seriesValues);
     const isAboveAvg = point.value > avg;
     const percentOfMax = max > 0 ? (point.value / max) * 100 : 0;
+    const hasCustomDetails = !!customDetails && Object.keys(customDetails).length > 0;
 
     return html`
       <div class="details-panel ${this.showDetails ? 'open' : ''}">
@@ -707,56 +716,68 @@ export class LineGraph extends Root {
             <div class="details-dot" style="background-color: ${series.color};"></div>
             ${series.name} at ${point.label}
           </div>
-          <button class="details-close" @click=${this.closeDetails}>✕</button>
+          <button class="details-close" @click=${this.closeDetails}>×</button>
         </div>
         <div class="details-body">
-          <div class="details-main">
-            <div class="detail-item">
-              <span class="detail-label">Value</span>
-              <span class="detail-value highlight">${this.formatValue(point.value)}</span>
+          ${hasCustomDetails ? html`
+            <div class="details-main">
+              ${Object.entries(customDetails!).map(([key, value]) => html`
+                <div class="detail-item">
+                  <span class="detail-label">${this.formatLabel(key)}</span>
+                  <span class="detail-value ${typeof value === 'number' ? 'highlight' : 'small'}">
+                    ${typeof value === 'number' ? this.formatValue(value) : String(value)}
+                  </span>
+                </div>
+              `)}
             </div>
-            <div class="detail-item">
-              <span class="detail-label">Period</span>
-              <span class="detail-value small">${point.label}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">Series Average</span>
-              <span class="detail-value small">${this.formatValue(avg)}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">vs Average</span>
-              <span class="detail-value small" style="color: ${isAboveAvg ? 'var(--semantic-success)' : 'var(--semantic-error)'};">
-                ${isAboveAvg ? '↑' : '↓'} ${Math.abs(((point.value - avg) / avg) * 100).toFixed(1)}%
-              </span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">Series Range</span>
-              <span class="detail-value small">${this.formatValue(min)} - ${this.formatValue(max)}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">% of Max</span>
-              <span class="detail-value small">${percentOfMax.toFixed(0)}%</span>
-            </div>
-          </div>
-          ${comparisonData.length > 0 ? html`
-            <div class="compare-section">
-              <div class="compare-title">Other Series at ${point.label}</div>
-              <div class="compare-items">
-                ${comparisonData.map(c => html`
-                  <div class="compare-item">
-                    <div class="compare-dot" style="background-color: ${c.color};"></div>
-                    <span class="compare-name">${c.name}:</span>
-                    <span class="compare-value">${this.formatValue(c.value)}</span>
-                  </div>
-                `)}
+          ` : html`
+            <div class="details-main">
+              <div class="detail-item">
+                <span class="detail-label">Value</span>
+                <span class="detail-value highlight">${this.formatValue(point.value)}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Period</span>
+                <span class="detail-value small">${point.label}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Series Average</span>
+                <span class="detail-value small">${this.formatValue(avg)}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">vs Average</span>
+                <span class="detail-value small" style="color: ${isAboveAvg ? 'var(--semantic-success)' : 'var(--semantic-error)'};">
+                  ${isAboveAvg ? '+' : '-'} ${Math.abs(((point.value - avg) / avg) * 100).toFixed(1)}%
+                </span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Series Range</span>
+                <span class="detail-value small">${this.formatValue(min)} - ${this.formatValue(max)}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">% of Max</span>
+                <span class="detail-value small">${percentOfMax.toFixed(0)}%</span>
               </div>
             </div>
-          ` : ''}
+            ${comparisonData.length > 0 ? html`
+              <div class="compare-section">
+                <div class="compare-title">Other Series at ${point.label}</div>
+                <div class="compare-items">
+                  ${comparisonData.map(c => html`
+                    <div class="compare-item">
+                      <div class="compare-dot" style="background-color: ${c.color};"></div>
+                      <span class="compare-name">${c.name}:</span>
+                      <span class="compare-value">${this.formatValue(c.value)}</span>
+                    </div>
+                  `)}
+                </div>
+              </div>
+            ` : ''}
+          `}
         </div>
       </div>
     `;
   }
-
   private closeDetails() {
     this.showDetails = false;
     this.selectedPoint = null;
@@ -776,7 +797,7 @@ export class LineGraph extends Root {
     this.tooltip = { ...this.tooltip, visible: false };
   }
 
-  private handlePointClick(point: ChartPoint, series: SeriesData, pointIndex: number) {
+  private handlePointClick(point: ChartPoint, series: SeriesData, pointIndex: number, customDetails?: DetailRecord) {
     const enrichedPoint = { ...point, index: pointIndex, seriesName: series.name, seriesColor: series.color };
     
     // Toggle details panel
@@ -790,7 +811,8 @@ export class LineGraph extends Root {
       this.detailsData = {
         point: enrichedPoint,
         series: series,
-        allSeries: [] // Will be set from render context
+        allSeries: [], // Will be set from render context
+        customDetails
       };
       this.showDetails = true;
     }
@@ -823,7 +845,15 @@ export class LineGraph extends Root {
     return value.toFixed(0);
   }
 
-  private renderSeries(series: SeriesData, points: ChartPoint[], chartHeight: number, _minValue: number, _range: number, seriesIdx: number) {
+  private formatLabel(key: string): string {
+    return key
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/[_-]/g, ' ')
+      .replace(/\b\w/g, l => l.toUpperCase())
+      .trim();
+  }
+
+  private renderSeries(series: SeriesData, points: ChartPoint[], chartHeight: number, _minValue: number, _range: number, seriesIdx: number, details: DetailRecord[]) {
     if (points.length === 0) return '';
 
     const linePath = this.createSmoothPath(points);
@@ -869,7 +899,7 @@ export class LineGraph extends Root {
           style="animation-delay: ${seriesIdx * 0.2 + 1 + i * 0.1}s; color: ${series.color}; opacity: ${isSeriesDimmed ? '0.4' : '1'};"
           @mouseenter=${() => this.showTooltip(p, series.name, series.color)}
           @mouseleave=${() => this.hideTooltip()}
-          @click=${() => this.handlePointClick(p, series, i)}
+          @click=${() => this.handlePointClick(p, series, i, details[i])}
         >
         </circle>
       `) : ''}
@@ -884,4 +914,63 @@ export class LineGraph extends Root {
     // Use simple line segments for cleaner look
     return points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
   }
+
+  private isMapLike(value: any): boolean {
+    return !!value
+      && typeof value.get === 'function'
+      && typeof value.values === 'function'
+      && typeof value.forEach === 'function';
+  }
+
+  private mapToObject(mapOrValue: any): any {
+    if (this.isMapLike(mapOrValue)) {
+      const obj: Record<string, any> = {};
+      mapOrValue.forEach((value: any, key: string) => {
+        obj[key] = this.mapToObject(value);
+      });
+      return obj;
+    }
+    return mapOrValue;
+  }
+
+  private parseRecordItem(item: any): DetailRecord {
+    const record: DetailRecord = {};
+    if (!item || typeof item !== 'object') return record;
+
+    if ('valueMap' in item && Array.isArray(item.valueMap)) {
+      for (const kv of item.valueMap) {
+        if (!kv || !kv.key) continue;
+        if (kv.valueString !== undefined) {
+          record[kv.key] = kv.valueString;
+        } else if (kv.valueNumber !== undefined) {
+          record[kv.key] = kv.valueNumber;
+        } else if (kv.valueBoolean !== undefined) {
+          record[kv.key] = kv.valueBoolean;
+        } else if (kv.valueMap !== undefined) {
+          record[kv.key] = this.mapToObject(kv.valueMap);
+        }
+      }
+      return record;
+    }
+
+    if (this.isMapLike(item)) {
+      return this.mapToObject(item);
+    }
+
+    return { ...item };
+  }
+
+  private parseRecordsFromPath(path: any): DetailRecord[] {
+    if (!path || typeof path !== 'string' || !this.processor) return [];
+    let rawData = this.processor.getData(this.component, path, this.surfaceId ?? 'default') as any;
+
+    if (this.isMapLike(rawData)) {
+      rawData = Array.from(rawData.values());
+    }
+    if (!Array.isArray(rawData)) return [];
+
+    return rawData.map((item: any) => this.parseRecordItem(item));
+  }
 }
+
+

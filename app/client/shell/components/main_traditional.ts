@@ -458,6 +458,20 @@ export class StaticModule extends LitElement {
                   { key: '9', valueString: 'Oct' },
                   { key: '10', valueString: 'Nov' },
                   { key: '11', valueString: 'Dec' }
+                ]},
+                { key: 'energyTrendDetails', valueMap: [
+                  { key: '0', valueMap: [{ key: 'period', valueString: 'January' }, { key: 'trend', valueString: 'Winter baseline output' }, { key: 'forecast', valueString: 'Expected increase next month' }]},
+                  { key: '1', valueMap: [{ key: 'period', valueString: 'February' }, { key: 'trend', valueString: 'Seasonal ramp-up' }, { key: 'forecast', valueString: 'Continued growth expected' }]},
+                  { key: '2', valueMap: [{ key: 'period', valueString: 'March' }, { key: 'trend', valueString: 'Strong spring growth' }, { key: 'forecast', valueString: 'Above-average production likely' }]},
+                  { key: '3', valueMap: [{ key: 'period', valueString: 'April' }, { key: 'trend', valueString: 'Rapid acceleration' }, { key: 'forecast', valueString: 'Near-summer peak expected' }]},
+                  { key: '4', valueMap: [{ key: 'period', valueString: 'May' }, { key: 'trend', valueString: 'High output period' }, { key: 'forecast', valueString: 'Stable high generation' }]},
+                  { key: '5', valueMap: [{ key: 'period', valueString: 'June' }, { key: 'trend', valueString: 'Summer peak onset' }, { key: 'forecast', valueString: 'Potential monthly maximum' }]},
+                  { key: '6', valueMap: [{ key: 'period', valueString: 'July' }, { key: 'trend', valueString: 'Sustained peak' }, { key: 'forecast', valueString: 'Slight taper expected' }]},
+                  { key: '7', valueMap: [{ key: 'period', valueString: 'August' }, { key: 'trend', valueString: 'Post-peak normalization' }, { key: 'forecast', valueString: 'Gradual decline expected' }]},
+                  { key: '8', valueMap: [{ key: 'period', valueString: 'September' }, { key: 'trend', valueString: 'Early autumn decline' }, { key: 'forecast', valueString: 'Further reduction likely' }]},
+                  { key: '9', valueMap: [{ key: 'period', valueString: 'October' }, { key: 'trend', valueString: 'Autumn stabilization' }, { key: 'forecast', valueString: 'Low volatility expected' }]},
+                  { key: '10', valueMap: [{ key: 'period', valueString: 'November' }, { key: 'trend', valueString: 'Pre-winter reduction' }, { key: 'forecast', valueString: 'Seasonal low approaching' }]},
+                  { key: '11', valueMap: [{ key: 'period', valueString: 'December' }, { key: 'trend', valueString: 'Winter trough' }, { key: 'forecast', valueString: 'Recovery expected in Q1' }]}
                 ]}
               ]
             },
@@ -498,6 +512,12 @@ export class StaticModule extends LitElement {
                     { key: 'resolution', valueString: 'Tree branch cleared, line inspected and tested' },
                     { key: 'duration', valueString: '1 hour 35 minutes' }
                   ]}
+                ]},
+                { key: 'timelineEventDetails', valueMap: [
+                  { key: '0', valueMap: [{ key: 'status', valueString: 'Active' }, { key: 'affectedArea', valueString: 'West Residential - Blocks 12-18' }, { key: 'assignedTeam', valueString: 'Team Echo (6 technicians)' }]},
+                  { key: '1', valueMap: [{ key: 'status', valueString: 'Active' }, { key: 'affectedArea', valueString: 'Downtown Sectors A, B, C' }, { key: 'assignedTeam', valueString: 'Team Alpha (5 technicians)' }]},
+                  { key: '2', valueMap: [{ key: 'status', valueString: 'Investigating' }, { key: 'affectedArea', valueString: 'North Substation perimeter' }, { key: 'assignedTeam', valueString: 'Team Beta (3 technicians)' }]},
+                  { key: '3', valueMap: [{ key: 'status', valueString: 'Resolved' }, { key: 'resolution', valueString: 'Tree branch cleared, line inspected and tested' }, { key: 'duration', valueString: '1 hour 35 minutes' }]}
                 ]}
               ]
             },
@@ -808,6 +828,7 @@ export class StaticModule extends LitElement {
         <line-graph 
           .seriesPath=${"/trends/energyTrend"} 
           .labelPath=${"/trends/energyTrendLabels"} 
+          .detailsPath=${"/trends/energyTrendDetails"}
           .title=${"Monthly Production by Source"} 
           .processor=${this.processor} 
           .component=${this}
@@ -826,6 +847,7 @@ export class StaticModule extends LitElement {
         <div class="section-title">Outage Details by Location</div>
         <data-table
           .dataPath=${"/outageTable"}
+          .detailsPath=${"/outageTableDetails"}
           .title=${"Outage Details"}
           .columns=${[
             {header: "Outage ID", field: "id", type: "string"},
@@ -847,6 +869,7 @@ export class StaticModule extends LitElement {
         <div class="section-title">Outage Timeline</div>
         <timeline-component 
           .dataPath=${"/timeline/timelineEvents"} 
+          .detailsPath=${"/timeline/timelineEventDetails"}
           .processor=${this.processor} 
           .component=${this}
           expandable
@@ -858,6 +881,7 @@ export class StaticModule extends LitElement {
         <div class="section-title">Industry Performance Metrics</div>
         <data-table
           .dataPath=${"/industry/industryTable"}
+          .detailsPath=${"/industry/industryTableDetails"}
           .title=${"Industry Data"}
           .columns=${[
             {header: "Industry", field: "name", type: "string"},

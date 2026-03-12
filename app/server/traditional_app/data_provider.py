@@ -118,6 +118,7 @@ async def get_traditional_outage_messages():
     ]
 
     outage_table = []
+    outage_table_details = []
     map_markers = []
 
     for i, outage in enumerate(outages):
@@ -132,11 +133,20 @@ async def get_traditional_outage_messages():
                 {"key": "severity", "valueString": outage.get("severity", "High")},
                 {"key": "startTime", "valueString": outage["start_time"]},
                 {"key": "estimatedRestoration", "valueString": outage["estimated_restoration"]},
-                {"key": "affectedCustomers", "valueNumber": outage["affected_customers"]},
+                {"key": "affectedCustomers", "valueNumber": outage["affected_customers"]}
+            ]
+        })
+
+        outage_table_details.append({
+            "key": str(i),
+            "valueMap": [
+                {"key": "outageId", "valueString": outage_id},
                 {"key": "cause", "valueString": outage["cause"]},
                 {"key": "crewAssigned", "valueString": outage["crew_assigned"]},
                 {"key": "priority", "valueString": outage["priority"]},
-                {"key": "notes", "valueString": outage["notes"]}
+                {"key": "notes", "valueString": outage["notes"]},
+                {"key": "customerImpact", "valueString": f"{outage['affected_customers']} customers impacted"},
+                {"key": "restorationWindow", "valueString": f"{outage['start_time']} to {outage['estimated_restoration']}"}
             ]
         })
 
@@ -232,6 +242,10 @@ async def get_traditional_outage_messages():
                         "valueMap": outage_table
                     },
                     {
+                        "key": "outageTableDetails",
+                        "valueMap": outage_table_details
+                    },
+                    {
                         "key": "mapMarkers",
                         "valueMap": map_markers
                     },
@@ -252,6 +266,80 @@ async def get_traditional_energy_trends_messages():
 
     months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
     base_production = energy_data["production"]
+    energy_trend_details = [
+        {"key": "0", "valueMap": [
+            {"key": "period", "valueString": "January"},
+            {"key": "trend", "valueString": "Lower winter generation baseline"},
+            {"key": "forecast", "valueString": "Expected gradual increase"},
+            {"key": "mainDriver", "valueString": "Seasonal irradiation and wind stability"}
+        ]},
+        {"key": "1", "valueMap": [
+            {"key": "period", "valueString": "February"},
+            {"key": "trend", "valueString": "Early seasonal ramp-up"},
+            {"key": "forecast", "valueString": "Continued growth expected"},
+            {"key": "mainDriver", "valueString": "Improving weather conditions"}
+        ]},
+        {"key": "2", "valueMap": [
+            {"key": "period", "valueString": "March"},
+            {"key": "trend", "valueString": "Strong spring momentum"},
+            {"key": "forecast", "valueString": "Above-average production likely"},
+            {"key": "mainDriver", "valueString": "Higher daylight hours"}
+        ]},
+        {"key": "3", "valueMap": [
+            {"key": "period", "valueString": "April"},
+            {"key": "trend", "valueString": "Peak spring acceleration"},
+            {"key": "forecast", "valueString": "Near-summer levels expected"},
+            {"key": "mainDriver", "valueString": "High renewable utilization"}
+        ]},
+        {"key": "4", "valueMap": [
+            {"key": "period", "valueString": "May"},
+            {"key": "trend", "valueString": "High output period"},
+            {"key": "forecast", "valueString": "Stable high generation"},
+            {"key": "mainDriver", "valueString": "Consistent solar and wind performance"}
+        ]},
+        {"key": "5", "valueMap": [
+            {"key": "period", "valueString": "June"},
+            {"key": "trend", "valueString": "Summer peak onset"},
+            {"key": "forecast", "valueString": "Potential short-term maximum"},
+            {"key": "mainDriver", "valueString": "Maximum solar contribution"}
+        ]},
+        {"key": "6", "valueMap": [
+            {"key": "period", "valueString": "July"},
+            {"key": "trend", "valueString": "Sustained summer peak"},
+            {"key": "forecast", "valueString": "Slight taper expected in August"},
+            {"key": "mainDriver", "valueString": "High demand and strong generation"}
+        ]},
+        {"key": "7", "valueMap": [
+            {"key": "period", "valueString": "August"},
+            {"key": "trend", "valueString": "Post-peak normalization"},
+            {"key": "forecast", "valueString": "Gradual decline expected"},
+            {"key": "mainDriver", "valueString": "Seasonal normalization"}
+        ]},
+        {"key": "8", "valueMap": [
+            {"key": "period", "valueString": "September"},
+            {"key": "trend", "valueString": "Early autumn decline"},
+            {"key": "forecast", "valueString": "Further reduction likely"},
+            {"key": "mainDriver", "valueString": "Reduced daylight and milder wind"}
+        ]},
+        {"key": "9", "valueMap": [
+            {"key": "period", "valueString": "October"},
+            {"key": "trend", "valueString": "Autumn stabilization"},
+            {"key": "forecast", "valueString": "Low-volatility period expected"},
+            {"key": "mainDriver", "valueString": "Balanced mixed-source output"}
+        ]},
+        {"key": "10", "valueMap": [
+            {"key": "period", "valueString": "November"},
+            {"key": "trend", "valueString": "Pre-winter lower output"},
+            {"key": "forecast", "valueString": "Seasonal low likely in December"},
+            {"key": "mainDriver", "valueString": "Shorter daylight window"}
+        ]},
+        {"key": "11", "valueMap": [
+            {"key": "period", "valueString": "December"},
+            {"key": "trend", "valueString": "Winter trough"},
+            {"key": "forecast", "valueString": "Recovery expected in Q1"},
+            {"key": "mainDriver", "valueString": "Seasonal generation constraints"}
+        ]}
+    ]
     energy_trend = [
         {"key": "solar", "valueMap": [
             {"key": "name", "valueString": "Solar"},
@@ -322,6 +410,10 @@ async def get_traditional_energy_trends_messages():
                     {
                         "key": "energyTrendLabels",
                         "valueMap": [{"key": str(i), "valueString": month} for i, month in enumerate(months)]
+                    },
+                    {
+                        "key": "energyTrendDetails",
+                        "valueMap": energy_trend_details
                     }
                 ]
             }
@@ -338,6 +430,7 @@ async def get_traditional_timeline_messages():
     outages = data["outages"]
 
     timeline_events = []
+    timeline_event_details = []
 
     for i, outage in enumerate(outages):
         # Calculate estimated duration (rough estimate based on restoration time - start time)
@@ -352,11 +445,19 @@ async def get_traditional_timeline_messages():
                 {"key": "date", "valueString": outage["start_time"]},
                 {"key": "title", "valueString": f"Outage Reported in {outage['location']}"},
                 {"key": "description", "valueString": outage["cause"]},
+                {"key": "category", "valueString": outage.get("status", "Active")}
+            ]
+        })
+
+        timeline_event_details.append({
+            "key": str(i),
+            "valueMap": [
                 {"key": "status", "valueString": outage.get("status", "Active")},
                 {"key": "affectedCustomers", "valueNumber": outage["affected_customers"]},
                 {"key": "location", "valueString": outage["location"]},
                 {"key": "assignedCrew", "valueString": outage["crew_assigned"]},
-                {"key": "estimatedDuration", "valueString": f"{duration_hours} hours"}
+                {"key": "estimatedDuration", "valueString": f"{duration_hours} hours"},
+                {"key": "estimatedRestoration", "valueString": outage["estimated_restoration"]}
             ]
         })
 
@@ -369,6 +470,10 @@ async def get_traditional_timeline_messages():
                     {
                         "key": "timelineEvents",
                         "valueMap": timeline_events
+                    },
+                    {
+                        "key": "timelineEventDetails",
+                        "valueMap": timeline_event_details
                     }
                 ]
             }
@@ -420,7 +525,13 @@ async def get_traditional_industry_messages():
     data = await get_traditional_industry_data()
 
     industry_table = []
+    industry_table_details = []
     for i, industry in enumerate(data["industries"]):
+        growth_rate = industry['growth_rate']
+        efficiency_score = industry['key_metrics']['efficiency_score']
+        growth_band = "High growth" if growth_rate >= 15 else "Moderate growth" if growth_rate >= 8 else "Stable growth"
+        efficiency_band = "Excellent" if efficiency_score >= 92 else "Good" if efficiency_score >= 85 else "Needs improvement"
+
         industry_table.append({
             "key": str(i),
             "valueMap": [
@@ -433,6 +544,18 @@ async def get_traditional_industry_messages():
             ]
         })
 
+        industry_table_details.append({
+            "key": str(i),
+            "valueMap": [
+                {"key": "industry", "valueString": industry["name"]},
+                {"key": "growthBand", "valueString": growth_band},
+                {"key": "efficiencyBand", "valueString": efficiency_band},
+                {"key": "outputValueBillion", "valueString": f"{industry['key_metrics']['output_value']} B"},
+                {"key": "employmentShare", "valueString": f"{round((industry['employment'] / data['overall_metrics']['total_employment']) * 100, 1)}% of total workforce"},
+                {"key": "summary", "valueString": f"{industry['name']} has {growth_rate}% growth with an efficiency score of {efficiency_score}"}
+            ]
+        })
+
     messages = [
         {
             "dataModelUpdate": {
@@ -442,6 +565,10 @@ async def get_traditional_industry_messages():
                     {
                         "key": "industryTable",
                         "valueMap": industry_table
+                    },
+                    {
+                        "key": "industryTableDetails",
+                        "valueMap": industry_table_details
                     },
                     {
                         "key": "industryMetrics",
