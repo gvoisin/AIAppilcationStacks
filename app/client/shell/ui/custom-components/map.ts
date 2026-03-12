@@ -1,6 +1,7 @@
 import { html, css } from "lit";
 import { property, customElement, state } from "lit/decorators.js";
 import { Root } from "@a2ui/lit/ui";
+import { v0_8 } from "@a2ui/lit";
 import maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { colors } from "../../theme/design-tokens.js";
@@ -22,6 +23,9 @@ export class MapComponent extends Root {
   @property({ attribute: false }) accessor centerLng: number = -74.006;
   @property({ attribute: false }) accessor zoom: number = 10;
   @property({ attribute: false }) accessor showInfoPanel: boolean = true;
+  @property({ attribute: false }) accessor action: v0_8.Types.Action | null = null;
+  // Backward fallback when no action is supplied in payload.
+  @property({ attribute: false }) accessor flagActionName: string = "flag_circuit";
 
   @state() accessor selectedMarker: MapMarker | null = null;
 
@@ -288,6 +292,13 @@ export class MapComponent extends Root {
         <button class="marker-action-btn" @click=${() => this.flyToMarker(marker)}>
           Center on Map
         </button>
+        <button
+          class="marker-action-btn"
+          style="background: var(--color-warning); color: var(--surface-primary); margin-top: var(--space-xs);"
+          @click=${() => this.flagMarker(marker)}
+        >
+          Flag Circuit
+        </button>
         <button class="marker-action-btn" style="background: var(--surface-primary); color: var(--text-secondary); margin-top: var(--space-xs);" @click=${() => this.clearSelection()}>
           Back to List
         </button>
@@ -330,6 +341,58 @@ export class MapComponent extends Root {
         duration: 1000
       });
     }
+  }
+
+  private getValidatedActionName(): string {
+    const fallback = (this.flagActionName || "flag_circuit").trim();
+    const candidate = (this.action?.name || fallback).trim();
+    const safeActionNamePattern = /^[a-z][a-z0-9_]{1,63}$/;
+
+    if (!safeActionNamePattern.test(candidate)) {
+      console.warn(
+        `[MapComponent] Invalid action name "${candidate}". Falling back to "${fallback}".`
+      );
+      return fallback;
+    }
+
+    return candidate;
+  }
+
+  private flagMarker(marker: MapMarker) {
+    const markerContext: Record<string, unknown> = {
+      markerName: marker.name,
+      latitude: marker.lat,
+      longitude: marker.lng,
+      description: marker.description ?? "",
+      status: marker.status ?? "",
+      ...(marker.details ?? {}),
+    };
+
+    const contextEntries: NonNullable<v0_8.Types.Action["context"]> =
+      Object.entries(markerContext).map(([key, value]) => {
+        if (typeof value === "boolean") {
+          return { key, value: { literalBoolean: value } };
+        }
+        if (typeof value === "number") {
+          return { key, value: { literalNumber: value } };
+        }
+        return { key, value: { literalString: String(value) } };
+      });
+
+    const resolvedAction: v0_8.Types.Action = {
+      name: this.getValidatedActionName(),
+      context: [...(this.action?.context ?? []), ...contextEntries],
+    };
+
+    const evt = new v0_8.Events.StateEvent<"a2ui.action">({
+      eventType: "a2ui.action",
+      action: resolvedAction,
+      dataContextPath: this.dataContextPath,
+      sourceComponentId: this.id || "map-component",
+      sourceComponent: this.component,
+    });
+
+    this.dispatchEvent(evt);
   }
 
   private formatLabel(key: string): string {

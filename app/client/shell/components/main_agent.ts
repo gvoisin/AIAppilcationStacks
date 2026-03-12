@@ -323,6 +323,9 @@ export class DynamicModule extends LitElement {
           this.#elapsedTime = null;
           this.#currentElapsedTime = 0;
           this.#totalDuration = 0;
+          this.#requesting = true;
+          this.#error = null;
+          this.#startLoadingAnimation();
           // Capture the last user question
           this.#lastUserQuestion = sentEvent.message || '';
           // Reset status with new query start
@@ -415,6 +418,12 @@ export class DynamicModule extends LitElement {
       if (hasMessage && this.#startTime) {
         this.#elapsedTime = Date.now() - this.#startTime;
         this.#stopStopwatch();
+      }
+
+      // End request-level loading once server marks this cycle complete.
+      if (isFinal || state === 'failed') {
+        this.#requesting = false;
+        this.#stopLoadingAnimation();
       }
     }
     else if (event.kind === 'task') {
@@ -610,16 +619,25 @@ export class DynamicModule extends LitElement {
     return html`<div class="error">${this.#error}</div>`;
   }
 
+  #getCurrentLoadingText(defaultText: string) {
+    const latestStatusText = this.status[this.status.length - 1]?.message;
+    if (typeof latestStatusText === "string" && latestStatusText.trim().length > 0) {
+      return latestStatusText;
+    }
+
+    if (this.config.loadingText) {
+      if (Array.isArray(this.config.loadingText)) {
+        return this.config.loadingText[this.#loadingTextIndex];
+      }
+      return this.config.loadingText;
+    }
+
+    return defaultText;
+  }
+
   #maybeRenderData() {
     if (this.#requesting) {
-      let text = "Awaiting an answer...";
-      if (this.config.loadingText) {
-        if (Array.isArray(this.config.loadingText)) {
-          text = this.config.loadingText[this.#loadingTextIndex];
-        } else {
-          text = this.config.loadingText;
-        }
-      }
+      const text = this.#getCurrentLoadingText("Awaiting an answer...");
 
       return html`
         <div class="pending">
@@ -631,14 +649,7 @@ export class DynamicModule extends LitElement {
 
     // Show loading when processing new surfaces (TODO: fix styles since loader is not showing)
     if (this.#processingSurfaces) {
-      let text = "Updating interface...";
-      if (this.config.loadingText) {
-        if (Array.isArray(this.config.loadingText)) {
-          text = this.config.loadingText[this.#loadingTextIndex];
-        } else {
-          text = this.config.loadingText;
-        }
-      }
+      const text = this.#getCurrentLoadingText("Updating interface...");
 
       return html`
         <div class="surfaces-container">
@@ -678,11 +689,11 @@ export class DynamicModule extends LitElement {
             if (evt.detail.action.context) {
               const srcContext = evt.detail.action.context;
               for (const item of srcContext) {
-                if (item.value.literalBoolean) {
+                if (item.value.literalBoolean !== undefined) {
                   context[item.key] = item.value.literalBoolean;
-                } else if (item.value.literalNumber) {
+                } else if (item.value.literalNumber !== undefined) {
                   context[item.key] = item.value.literalNumber;
-                } else if (item.value.literalString) {
+                } else if (item.value.literalString !== undefined) {
                   context[item.key] = item.value.literalString;
                 } else if (item.value.path) {
                   const path = this.#processor.resolvePath(
@@ -709,19 +720,7 @@ export class DynamicModule extends LitElement {
               },
             };
 
-            // Send action back via router
-            if (this.router) {
-              this.#requesting = true;
-              this.#startLoadingAnimation();
-              try {
-                await this.router.sendA2UIMessage(this.config.serverUrl || "http://localhost:10002", message);
-              } catch (err) {
-                this.snackbar(err as string, SnackType.ERROR);
-              } finally {
-                this.#requesting = false;
-                this.#stopLoadingAnimation();
-              }
-            }
+            await this.#sendUserActionMessage(message);
           }}
                 .surfaceId=${surfaceId}
                 .surface=${surface}
@@ -736,6 +735,20 @@ export class DynamicModule extends LitElement {
 
   #renderStatusWindow() {
     return html`<status-drawer .items=${this.status} accentColor="var(--agent-accent)"></status-drawer>`;
+  }
+
+  async #sendUserActionMessage(message: v0_8.Types.A2UIClientEventMessage) {
+    if (!this.router) return;
+    try {
+      await this.router.sendA2UIMessage(
+        this.config.serverUrl || "http://localhost:10002",
+        message
+      );
+    } catch (err) {
+      this.#requesting = false;
+      this.#stopLoadingAnimation();
+      this.snackbar(err as string, SnackType.ERROR);
+    }
   }
 }
 

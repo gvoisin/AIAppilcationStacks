@@ -1,6 +1,7 @@
 import { html, css } from "lit";
 import { property, customElement, state } from "lit/decorators.js";
 import { Root } from "@a2ui/lit/ui";
+import { v0_8 } from "@a2ui/lit";
 import { colors } from "../../theme/design-tokens.js";
 import { ItemSelectEvent } from "./detail-modal.js";
 
@@ -19,6 +20,9 @@ export class TimelineComponent extends Root {
   @property({ attribute: false }) accessor detailsPath: any = "";
   @property({ attribute: false }) accessor expandable: boolean = true;
   @property({ attribute: false }) accessor compactPreview: boolean = true;
+  @property({ attribute: false }) accessor action: v0_8.Types.Action | null = null;
+  @property({ attribute: false }) accessor actionLabel: string = "";
+  @property({ attribute: false }) accessor actionFallbackName: string = "queue_timeline_event";
 
   @state() accessor expandedItems: Set<number> = new Set();
 
@@ -372,8 +376,9 @@ export class TimelineComponent extends Root {
                 `) : ''}
               </div>
               <div class="timeline-actions">
-                <button class="timeline-action-btn" @click=${(e: Event) => this.handleAction(e, 'view', event)}>View Details</button>
-                <button class="timeline-action-btn" @click=${(e: Event) => this.handleAction(e, 'edit', event)}>Edit</button>
+                <button class="timeline-action-btn" @click=${(e: Event) => this.handleAction(e, event, index)}>
+                  ${this.getActionLabel(event)}
+                </button>
               </div>
             </div>
           ` : ''}
@@ -396,12 +401,86 @@ export class TimelineComponent extends Root {
     this.dispatchEvent(new ItemSelectEvent(event, index));
   }
 
-  private handleAction(e: Event, action: string, event: TimelineEvent) {
+  private getValidatedActionName(): string {
+    const fallback = (this.actionFallbackName || "queue_timeline_event").trim();
+    const candidate = (this.action?.name || fallback).trim();
+    const safeActionNamePattern = /^[a-z][a-z0-9_]{1,63}$/;
+
+    if (!safeActionNamePattern.test(candidate)) {
+      console.warn(
+        `[TimelineComponent] Invalid action name "${candidate}". Falling back to "${fallback}".`
+      );
+      return fallback;
+    }
+
+    return candidate;
+  }
+
+  private humanizeActionName(actionName: string): string {
+    return actionName
+      .replace(/[_-]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
+  private getActionLabel(event: TimelineEvent): string {
+    const detailLabel = event.details?.actionLabel ?? event.details?.action_label;
+    if (typeof detailLabel === "string" && detailLabel.trim()) {
+      return detailLabel.trim();
+    }
+
+    const configuredLabel = this.actionLabel?.trim();
+    if (configuredLabel && configuredLabel.toLowerCase() !== "view details") {
+      return configuredLabel;
+    }
+
+    return this.humanizeActionName(this.getValidatedActionName());
+  }
+
+  private handleAction(e: Event, event: TimelineEvent, index: number) {
     e.stopPropagation();
+
+    const actionContext: Record<string, unknown> = {
+      timelineIndex: index,
+      date: event.date,
+      title: event.title,
+      description: event.description ?? "",
+      category: event.category ?? "",
+      ...(event.details ?? {}),
+    };
+
+    const contextEntries: NonNullable<v0_8.Types.Action["context"]> =
+      Object.entries(actionContext).map(([key, value]) => {
+        if (typeof value === "boolean") {
+          return { key, value: { literalBoolean: value } };
+        }
+        if (typeof value === "number") {
+          return { key, value: { literalNumber: value } };
+        }
+        return { key, value: { literalString: String(value) } };
+      });
+
+    const resolvedAction: v0_8.Types.Action = {
+      name: this.getValidatedActionName(),
+      context: [...(this.action?.context ?? []), ...contextEntries],
+    };
+
+    const evt = new v0_8.Events.StateEvent<"a2ui.action">({
+      eventType: "a2ui.action",
+      action: resolvedAction,
+      dataContextPath: this.dataContextPath,
+      sourceComponentId: this.id || "timeline-component",
+      sourceComponent: this.component,
+    });
+
+    this.dispatchEvent(evt);
+
+    // Backward compatibility for existing static module handlers.
     this.dispatchEvent(new CustomEvent('timeline-action', {
       bubbles: true,
       composed: true,
-      detail: { action, event }
+      detail: { action: resolvedAction.name, event }
     }));
   }
 

@@ -20,6 +20,16 @@ export function registerShellComponents() {
       gap: { type: "number" },
       interactive: { type: "boolean", description: "Enable hover and click interactions" },
       colorful: { type: "boolean", description: "Use different colors for each bar" },
+      action: {
+        type: "object",
+        description: "A2UI action metadata emitted when the user clicks the bar graph action button.",
+        properties: {
+          name: { type: "string", description: "Action name sent in userAction.name (recommend: highlight_data)" }
+        },
+        required: ["name"]
+      },
+      actionLabel: { type: "string", description: "Button label for bar action trigger (default: Queue Event)" },
+      actionFallbackName: { type: "string", description: "Fallback action name when action is not provided (default: highlight_data)" },
     },
     required: ["dataPath", "labelPath"],
   });
@@ -49,6 +59,15 @@ export function registerShellComponents() {
       centerLng: { type: "number", description: "Initial center longitude of the map" },
       zoom: { type: "number", description: "Initial zoom level of the map" },
       showInfoPanel: { type: "boolean", description: "Show side info panel with marker list and details" },
+      action: {
+        type: "object",
+        description: "A2UI action metadata emitted when the user clicks the map panel flag button. Same protocol shape as native Button.action. Use a stable name like 'flag_circuit' for consistent userAction routing.",
+        properties: {
+          name: { type: "string", description: "Action name sent in userAction.name" }
+        },
+        required: ["name"]
+      },
+      flagActionName: { type: "string", description: "Legacy fallback action name when action is not provided" },
     },
     required: ["dataPath"],
   });
@@ -60,6 +79,16 @@ export function registerShellComponents() {
       detailsPath: { type: "string", description: "Path to array of detail objects for each timeline event (optional), aligned by event index." },
       expandable: { type: "boolean", description: "Enable expandable detail panels" },
       compactPreview: { type: "boolean", description: "Keep collapsed event cards concise and move description to the expanded panel (default true)." },
+      action: {
+        type: "object",
+        description: "A2UI action metadata emitted when the user clicks the timeline action button.",
+        properties: {
+          name: { type: "string", description: "Action name sent in userAction.name (recommend: queue_timeline_event)" }
+        },
+        required: ["name"]
+      },
+      actionLabel: { type: "string", description: "Button label for timeline action trigger (default: Queue Event)" },
+      actionFallbackName: { type: "string", description: "Fallback action name when action is not provided (default: queue_timeline_event)" },
     },
     required: [],
   });

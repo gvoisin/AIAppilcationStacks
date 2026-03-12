@@ -135,11 +135,16 @@ export class ChatModule extends LitElement {
 
       if (state === 'failed') {
         this.#addStatusWithDuration("Task failed - An error occurred", "error");
+        this.#pendingResponse = false;
       }
 
       // Calculate elapsed time when final response is received
       if (hasMessage && this.#startTime) {
         this.#elapsedTime = Date.now() - this.#startTime;
+      }
+
+      if (isFinal || state === 'failed') {
+        this.#pendingResponse = false;
       }
     }
     else if (event.kind === 'task') {
@@ -206,6 +211,14 @@ export class ChatModule extends LitElement {
     if (chatContainer) {
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
+  }
+
+  #getCurrentPendingText() {
+    const latestStatusText = this.status[this.status.length - 1]?.message;
+    if (typeof latestStatusText === "string" && latestStatusText.trim().length > 0) {
+      return latestStatusText;
+    }
+    return "Thinking...";
   }
 
   // this sends the message to the server
@@ -480,7 +493,7 @@ export class ChatModule extends LitElement {
             <div class="typing-dots">
               <span></span><span></span><span></span>
             </div>
-            <span>Thinking...</span>
+            <span>${this.#getCurrentPendingText()}</span>
           </div>
         ` : ''}
       </div>

@@ -34,9 +34,9 @@ export const config: AppConfig = {
   )`,
   placeholder: "Top 5 Chinese restaurants in New York.",
   loadingText: [
-    "Finding the best spots for you...",
-    "Checking reviews...",
-    "Looking for open tables...",
+    "Building the best workflow...",
+    "Checking data sources...",
+    "Creating amazing visuals...",
     "Almost there...",
   ],
   serverUrl: "http://localhost:10002/agent",

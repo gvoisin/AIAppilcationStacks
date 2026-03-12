@@ -2,7 +2,8 @@ WIDGET_NAME = "BarGraph"
 WIDGET_DESCRIPTION = """Interactive bar chart component for comparing data values with category labels.
 REQUIRED: dataPath (path to numeric values array), labelPath (path to category labels array).
 OPTIONAL: detailsPath (path to array of detail objects - each object contains custom key-value pairs to display in the expanded details panel when a bar is clicked, e.g., trend info, forecasts, breakdowns), title (chart heading), interactive (enables hover tooltips and click details panel, default true), 
-colorful (uses different colors per bar, default true), orientation ('vertical' or 'horizontal').
+colorful (uses different colors per bar, default true), orientation ('vertical' or 'horizontal'), action.
+For consistent userAction handling, set action.name to 'highlight_data' for the bar action button.
 Features: hover tooltips showing value/percentage, click to show detailed panel with custom agent-provided details or default stats (rank/comparison). 
 Data format: valueMap with key/valueNumber for data, key/valueString for labels, and key/valueMap containing detail key-value pairs for each bar's extra information."""
 
@@ -20,7 +21,9 @@ WIDGET_SCHEMA = """
           "title": "Outages comparison by regions",
           "interactive": true,
           "colorful": true,
-          "orientation": "vertical"
+          "orientation": "vertical",
+          "action": {{ "name": "highlight_data" }},
+          "actionLabel": "Queue Event"
         }} }} }}
       ]
     }}

@@ -1,6 +1,7 @@
 import { html, css } from "lit";
 import { property, customElement, state } from "lit/decorators.js";
 import { Root } from "@a2ui/lit/ui";
+import { v0_8 } from "@a2ui/lit";
 import { colors } from "../../theme/design-tokens.js";
 import { ItemSelectEvent } from "./detail-modal.js";
 
@@ -34,6 +35,9 @@ export class BarGraph extends Root {
   @property({ attribute: false }) accessor gap: number = 0.1;
   @property({ attribute: false }) accessor interactive: boolean = true;
   @property({ attribute: false }) accessor colorful: boolean = true;
+  @property({ attribute: false }) accessor action: v0_8.Types.Action | null = null;
+  @property({ attribute: false }) accessor actionLabel: string = "";
+  @property({ attribute: false }) accessor actionFallbackName: string = "highlight_data";
 
   @state() accessor hoveredBar: number | null = null;
   @state() accessor selectedBar: number | null = null;
@@ -299,6 +303,28 @@ export class BarGraph extends Root {
         color: var(--text-primary);
       }
 
+      .details-actions {
+        padding: 0 var(--space-md) var(--space-md);
+      }
+
+      .details-action-btn {
+        width: 100%;
+        padding: 8px 12px;
+        font-size: 12px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border-primary);
+        background: var(--surface-primary);
+        color: var(--text-primary);
+        cursor: pointer;
+        transition: all var(--transition-normal);
+      }
+
+      .details-action-btn:hover {
+        background: var(--oracle-primary);
+        border-color: var(--oracle-primary);
+        color: var(--surface-primary);
+      }
+
       .details-body {
         padding: var(--space-md);
         display: grid;
@@ -544,6 +570,11 @@ export class BarGraph extends Root {
             : this.renderDefaultDetails(data, totalValue, maxValue)
           }
         </div>
+        <div class="details-actions">
+          <button class="details-action-btn" @click=${(e: Event) => this.handleQueueAction(e)}>
+            ${this.getActionLabel(data)}
+          </button>
+        </div>
       </div>
     `;
   }
@@ -636,6 +667,85 @@ export class BarGraph extends Root {
       composed: true,
       detail: { bar: item, index }
     }));
+  }
+
+  private getValidatedActionName(): string {
+    const fallback = (this.actionFallbackName || "highlight_data").trim();
+    const candidate = (this.action?.name || fallback).trim();
+    const safeActionNamePattern = /^[a-z][a-z0-9_]{1,63}$/;
+
+    if (!safeActionNamePattern.test(candidate)) {
+      console.warn(
+        `[BarGraph] Invalid action name "${candidate}". Falling back to "${fallback}".`
+      );
+      return fallback;
+    }
+
+    return candidate;
+  }
+
+  private humanizeActionName(actionName: string): string {
+    return actionName
+      .replace(/[_-]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/\b\w/g, (char) => char.toUpperCase());
+  }
+
+  private getActionLabel(bar: BarData): string {
+    const detailLabel = bar.details?.actionLabel ?? bar.details?.action_label;
+    if (typeof detailLabel === "string" && detailLabel.trim()) {
+      return detailLabel.trim();
+    }
+
+    const configuredLabel = this.actionLabel?.trim();
+    if (configuredLabel && configuredLabel.toLowerCase() !== "view details") {
+      return configuredLabel;
+    }
+
+    return this.humanizeActionName(this.getValidatedActionName());
+  }
+
+  private handleQueueAction(e: Event) {
+    e.stopPropagation();
+    if (!this.selectedBarData || this.selectedBar === null) return;
+
+    const bar = this.selectedBarData;
+    const actionContext: Record<string, unknown> = {
+      barIndex: this.selectedBar,
+      category: bar.category,
+      value: bar.value,
+      percentage: bar.percentage ?? 0,
+      rank: bar.rank ?? 0,
+      totalBars: bar.total ?? 0,
+      ...(bar.details ?? {}),
+    };
+
+    const contextEntries: NonNullable<v0_8.Types.Action["context"]> =
+      Object.entries(actionContext).map(([key, value]) => {
+        if (typeof value === "boolean") {
+          return { key, value: { literalBoolean: value } };
+        }
+        if (typeof value === "number") {
+          return { key, value: { literalNumber: value } };
+        }
+        return { key, value: { literalString: String(value) } };
+      });
+
+    const resolvedAction: v0_8.Types.Action = {
+      name: this.getValidatedActionName(),
+      context: [...(this.action?.context ?? []), ...contextEntries],
+    };
+
+    const evt = new v0_8.Events.StateEvent<"a2ui.action">({
+      eventType: "a2ui.action",
+      action: resolvedAction,
+      dataContextPath: this.dataContextPath,
+      sourceComponentId: this.id || "bar-graph",
+      sourceComponent: this.component,
+    });
+
+    this.dispatchEvent(evt);
   }
 
   private formatValue(value: number): string {

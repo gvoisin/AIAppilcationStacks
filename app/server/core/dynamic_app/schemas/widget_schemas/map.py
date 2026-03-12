@@ -1,5 +1,5 @@
 WIDGET_NAME = "MapComponent"
-WIDGET_DESCRIPTION = "Interactive map component to display location markers with a side panel showing marker details. Each marker requires coordinates (latitude/longitude), a name, and optionally: description, status, and any additional key-value pairs that will be displayed as details in the side panel when a marker is selected."
+WIDGET_DESCRIPTION = "Interactive map component to display location markers with a side panel showing marker details. Each marker requires coordinates (latitude/longitude), a name, and optionally: description, status, and any additional key-value pairs that will be displayed as details in the side panel when a marker is selected. For consistent userAction handling, MapComponent should define action.name as 'flag_circuit' for the flag button interaction."
 WIDGET_SCHEMA = """
 [
   {{ "beginRendering": {{ "surfaceId": "map-view","root": "main-column" }} }},
@@ -13,7 +13,10 @@ WIDGET_SCHEMA = """
           "centerLat": 40.7128,
           "centerLng": -74.0060,
           "zoom": 10,
-          "showInfoPanel": true
+          "showInfoPanel": true,
+          "action": {{
+            "name": "flag_circuit"
+          }}
         }} }} }}
       ]
     }}

@@ -112,9 +112,21 @@ class DynamicGraphExecutor(AgentExecutor):
 
         if ui_event_part:
             logger.info(f"Received a2ui ClientEvent: {ui_event_part}")
-            # Changed on event name due to new version, could change in the future
-            action = ui_event_part.get("name")
+            # Support both new and legacy payloads.
+            action = ui_event_part.get("name") or ui_event_part.get("actionName")
+            surface_id = ui_event_part.get("surfaceId")
+            source_component_id = ui_event_part.get("sourceComponentId")
+            timestamp = ui_event_part.get("timestamp")
             ctx = ui_event_part.get("context", {})
+
+            logger.info(
+                "USER_ACTION received | action=%s surface_id=%s source_component_id=%s timestamp=%s context=%s",
+                action,
+                surface_id,
+                source_component_id,
+                timestamp,
+                ctx,
+            )
 
             # Handle UI interaction events for energy/outage data
             query = f"User submitted an event: {action} with data: {ctx}"

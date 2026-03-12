@@ -1,7 +1,8 @@
 WIDGET_NAME = "TimelineComponent"
 WIDGET_DESCRIPTION = """Component designed to show events over time.
 REQUIRED: dataPath with core timeline fields (date, title, optional description/category).
-OPTIONAL: detailsPath (array of custom detail objects aligned by event index for expanded panel), expandable, compactPreview (keep collapsed cards concise and show description in expanded panel)."""
+OPTIONAL: detailsPath (array of custom detail objects aligned by event index for expanded panel), expandable, compactPreview (keep collapsed cards concise and show description in expanded panel), action.
+For consistent userAction handling, set action.name to 'queue_timeline_event' for the timeline action button."""
 WIDGET_SCHEMA = """
 [
   {{ "beginRendering": {{ "surfaceId": "timeline-view","root": "main-column" }} }},
@@ -10,7 +11,14 @@ WIDGET_SCHEMA = """
       "components": [
         {{ "id": "main-column", "component": {{ "Column": {{ "children": {{ "explicitList": ["title", "event-timeline"] }} }} }} }},
         {{ "id": "title","component": {{ "Text": {{ "usageHint": "h2", "text": {{ "literalString": "Event Timeline" }} }} }} }},
-        {{ "id": "event-timeline", "component": {{ "TimelineComponent": {{ "dataPath": "/timelineData", "detailsPath": "/timelineDetails", "expandable": true, "compactPreview": true }} }} }}
+        {{ "id": "event-timeline", "component": {{ "TimelineComponent": {{
+          "dataPath": "/timelineData",
+          "detailsPath": "/timelineDetails",
+          "expandable": true,
+          "compactPreview": true,
+          "action": {{ "name": "queue_timeline_event" }},
+          "actionLabel": "Queue Event"
+        }} }} }}
       ]
     }}
   }},
