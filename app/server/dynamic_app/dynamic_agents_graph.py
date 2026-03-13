@@ -1,4 +1,6 @@
 import logging
+import re
+import json
 
 from collections.abc import AsyncIterable
 from typing import Any
@@ -22,6 +24,29 @@ from dotenv import load_dotenv
 load_dotenv()
 
 logger = logging.getLogger(__name__)
+
+
+SOURCE_PATTERN = re.compile(r"\(Source:\s*([^)]+)\)")
+
+
+def extract_RAG_sources(semantic_result: str) -> list[str]:
+    """Extract unique document names from semantic search tool output."""
+    if not semantic_result:
+        return []
+
+    documents: list[str] = []
+    seen: set[str] = set()
+
+    for source in SOURCE_PATTERN.findall(semantic_result):
+        filename = source.strip().replace("\\", "/").split("/")[-1]
+        match = re.match(r"(.+?\.[A-Za-z0-9]+)(?:_start_\d+)?$", filename)
+        doc_name = match.group(1) if match else filename
+
+        if doc_name and doc_name not in seen:
+            seen.add(doc_name)
+            documents.append(doc_name)
+
+    return documents
 
 class DynamicGraph:
     """ Graph to call the UI agent chain """
@@ -84,8 +109,17 @@ class DynamicGraph:
 
         self._dynamic_ui_graph = graph_builder.compile(checkpointer=checkpointer)
 
-    def _format_message(self, message: AnyMessage, node_name: str = "", model_token_count: int = 0) -> tuple[str, int, str]:
+    def _format_message(
+        self,
+        message: AnyMessage,
+        node_name: str = "",
+        model_token_count: int = 0,
+        source_documents: list[str] | None = None
+    ) -> tuple[str, int, str]:
         """Status updates for client from each type of message"""
+        if source_documents is None:
+            source_documents = []
+
         agent_name = str(message.name) if hasattr(message, 'name') and message.name else "GRAPH"
         content = str(message.content)[:self.CONTENT_TRUNCATION_LENGTH]
 
@@ -103,6 +137,10 @@ class DynamicGraph:
             tool_name = str(message.name)
             timeline_message = f"Tool {tool_name} responded"
             detailed_message = f"Tool {tool_name} responded with data:\n{content}"
+            if tool_name == "semantic_search":
+                    for document_name in extract_RAG_sources(str(message.content)):
+                        if document_name not in source_documents:
+                            source_documents.append(document_name)
         elif isinstance(message, AIMessage):
             model_id = str(message.response_metadata.get("model_id", ""))
             total_tokens_on_call = int(message.response_metadata.get("total_tokens", '0'))
@@ -133,6 +171,8 @@ class DynamicGraph:
         model_token_count = 0
         node_name = "START"
         suggestions = ""
+        source_documents: list[str] = []
+        detailed_message = ""
 
         async for chunk in self._dynamic_ui_graph.astream(
             input=current_message,
@@ -141,7 +181,7 @@ class DynamicGraph:
             subgraphs=True
         ):
             latest_message: AnyMessage = chunk[1]['messages'][-1]
-            if hasattr(chunk[1], 'suggestions'):
+            if 'suggestions' in chunk[1]:
                 suggestions = chunk[1]['suggestions']
             final_response_content = latest_message.content
 
@@ -154,17 +194,25 @@ class DynamicGraph:
                 continue
 
             if isinstance(latest_message, AIMessage):
-                timeline_message, model_token_count, detailed_message = self._format_message(latest_message, node_name, model_token_count)
+                timeline_message, model_token_count, detailed_message = self._format_message(
+                    latest_message,
+                    node_name,
+                    model_token_count,
+                    source_documents
+                )
             else:
-                timeline_message, _, detailed_message = self._format_message(latest_message, node_name, model_token_count)
+                timeline_message, _, detailed_message = self._format_message(
+                    latest_message,
+                    node_name,
+                    model_token_count,
+                    source_documents
+                )
 
             updates = {
                 "is_task_complete": False,
                 "updates": timeline_message,
                 "detailed_updates": detailed_message
             }
-
-            logger.warning(f"STEP UPDATES: {updates}")
 
             yield updates
 
@@ -186,10 +234,9 @@ class DynamicGraph:
             "content": final_content,
             "detailed_updates": detailed_message,
             "token_count": str(model_token_count),
-            "suggestions": suggestions
+            "suggestions": suggestions,
+            "sources": json.dumps(source_documents)
         }
-
-        logger.warning(f"AGENT FINAL PAYLOAD: {final_payload}")
 
         yield final_payload
 

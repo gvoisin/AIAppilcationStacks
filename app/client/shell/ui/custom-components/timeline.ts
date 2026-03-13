@@ -143,6 +143,7 @@ export class TimelineComponent extends Root {
 
       .timeline-header-content {
         flex: 1;
+        min-width: 0;
       }
 
       .expand-toggle {
@@ -165,7 +166,8 @@ export class TimelineComponent extends Root {
       }
 
       .timeline-expanded-details.open {
-        max-height: 300px;
+        max-height: none;
+        overflow: visible;
         opacity: 1;
         margin-top: var(--space-sm);
         padding-top: var(--space-sm);
@@ -174,7 +176,7 @@ export class TimelineComponent extends Root {
 
       .timeline-detail-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
         gap: var(--space-sm);
       }
 
@@ -195,10 +197,12 @@ export class TimelineComponent extends Root {
       .timeline-detail-value {
         font-size: 13px;
         color: var(--text-primary);
+        overflow-wrap: anywhere;
       }
 
       .timeline-actions {
         display: flex;
+        flex-wrap: wrap;
         gap: var(--space-sm);
         margin-top: var(--space-sm);
       }
@@ -212,6 +216,9 @@ export class TimelineComponent extends Root {
         color: var(--text-secondary);
         cursor: pointer;
         transition: all var(--transition-normal);
+        max-width: 100%;
+        white-space: normal;
+        overflow-wrap: anywhere;
       }
 
       .timeline-action-btn:hover {

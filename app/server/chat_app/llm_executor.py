@@ -106,6 +106,9 @@ class OutageEnergyLLMExecutor(AgentExecutor):
             suggestions = item['suggestions']
             final_parts.append(Part(root=TextPart(text=suggestions.strip())))
 
+            sources = item.get('sources', '[]')
+            final_parts.append(Part(root=TextPart(text=sources.strip())))
+
             logger.info("--- FINAL PARTS TO BE SENT ---")
             for i, part in enumerate(final_parts):
                 logger.info(f"  - Part {i}: Type = {type(part.root)}")

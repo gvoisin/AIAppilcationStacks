@@ -71,6 +71,9 @@ export class DynamicModule extends LitElement {
   accessor tokenCount = ""
 
   @state()
+  accessor sources: string[] = []
+
+  @state()
   accessor #lastUserQuestion: string = "";
 
   @state()
@@ -119,6 +122,7 @@ export class DynamicModule extends LitElement {
       }
 
       :host {
+        --conversation-max-height: min(130vh, 1680px);
         display: flex;
         flex-direction: column;
         flex: 1 1 auto;
@@ -141,7 +145,7 @@ export class DynamicModule extends LitElement {
       .response {
         flex: 1 1 auto;
         min-height: 100px;
-        max-height: 1050px;
+        max-height: var(--conversation-max-height);
         font-size: var(--font-size-base);
         line-height: 1.6;
         margin-bottom: var(--space-sm);
@@ -176,21 +180,21 @@ export class DynamicModule extends LitElement {
       .surfaces-container {
         display: flex;
         flex-direction: column;
-        flex: 1 1 auto;
-        min-height: 200px;
-        overflow: auto;
-        max-height: 1050px
+        flex: 0 1 auto;
+        min-height: 0;
+        overflow: visible;
+        max-height: none;
       }
         
       .surfaces {
-        flex: 1 1 auto;
+        flex: 0 1 auto;
         width: 100%;
         max-width: 100svw;
         padding: var(--bb-grid-size-3);
         padding-bottom: 32px;
         animation: fadeIn 1s cubic-bezier(0, 0, 0.3, 1) 0.3s backwards;
         overflow-y: auto;
-        max-height: 1050px
+        max-height: var(--conversation-max-height);
       }
 
       .pending {
@@ -261,11 +265,26 @@ export class DynamicModule extends LitElement {
       transform: scale(0.98);
     }
 
+    .sources-floating {
+      flex-shrink: 0;
+      margin: 0 var(--space-md) var(--space-sm);
+      font-size: var(--font-size-xs);
+      line-height: 1.5;
+      color: var(--text-secondary);
+      background: transparent;
+      padding: 0.5rem;
+    }
+
+    .sources-floating strong {
+      color: var(--text-primary);
+      margin-right: var(--space-xs);
+    }
+
       .response-section {
-        flex: 1 1 auto;
+        flex: 0 1 auto;
         overflow: visible;
-        min-height: 100px;
-        max-height: 1050px;
+        min-height: 0;
+        max-height: none;
       }
 
       .pending {
@@ -325,6 +344,7 @@ export class DynamicModule extends LitElement {
           this.#totalDuration = 0;
           this.#requesting = true;
           this.#error = null;
+          this.sources = [];
           this.#startLoadingAnimation();
           // Capture the last user question
           this.#lastUserQuestion = sentEvent.message || '';
@@ -395,13 +415,21 @@ export class DynamicModule extends LitElement {
 
       console.log("server message", serverState);
 
-      // Get suggestions (part 2) if available
-      if (isFinal && serverState[6]?.text) {
-        this.suggestions = serverState[6].text;
-      }
+      if (isFinal) {
+        const textParts = serverState
+          .filter((part: any) => part.kind === "text")
+          .map((part: any) => part.text);
+        const metadataTail = textParts.slice(-4);
 
-      if (isFinal && serverState[5]?.text) {
-        this.tokenCount = serverState[5].text;
+        if (metadataTail[1]) {
+          this.tokenCount = metadataTail[1];
+        }
+
+        if (metadataTail[2]) {
+          this.suggestions = metadataTail[2];
+        }
+
+        this.sources = this.#parseSources(metadataTail[3] || "[]");
       }
 
       if (state == 'failed') {
@@ -498,6 +526,7 @@ export class DynamicModule extends LitElement {
     try {
       // Clear current suggestions when a new query is sent
       this.suggestions = "";
+      this.sources = [];
       this.router.sendTextMessage(this.config.serverUrl, suggestion.trim());
     } catch (error) {
       console.error("Failed to send suggestion:", error);
@@ -596,6 +625,11 @@ export class DynamicModule extends LitElement {
       ` : ''}
       ${this.#maybeRenderError()}
       ${this.#maybeRenderData()}
+      ${this.sources.length > 0 ? html`
+        <div class="sources-floating">
+          <strong>Sources:</strong>${this.sources.join(", ")}
+        </div>
+      ` : ''}
       ${this.suggestions ? html`
         <div class="suggestions">
           <div class="suggestions-list">
@@ -617,6 +651,26 @@ export class DynamicModule extends LitElement {
     if (!this.#error) return nothing;
 
     return html`<div class="error">${this.#error}</div>`;
+  }
+
+  #parseSources(sourcesText: string): string[] {
+    if (!sourcesText || !sourcesText.trim()) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(sourcesText);
+      if (Array.isArray(parsed)) {
+        return [...new Set(parsed.map((s) => String(s).trim()).filter((s) => s.length > 0))];
+      }
+      return [];
+    } catch {
+      return sourcesText
+        .replace(/^\[|\]$/g, "")
+        .split(",")
+        .map((s) => s.replace(/^["'\s]+|["'\s]+$/g, "").trim())
+        .filter((s) => s.length > 0);
+    }
   }
 
   #getCurrentLoadingText(defaultText: string) {

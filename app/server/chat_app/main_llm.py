@@ -1,5 +1,7 @@
 import logging
 import os
+import re
+import json
 from collections.abc import AsyncIterable
 from typing import Any
 from langchain.agents import create_agent
@@ -17,6 +19,29 @@ from chat_app.rag_tool import semantic_search
 from chat_app.nl2sql_agent import call_SQL_DB
 
 logger = logging.getLogger(__name__)
+
+
+SOURCE_PATTERN = re.compile(r"\(Source:\s*([^)]+)\)")
+
+
+def extract_RAG_sources(semantic_result: str) -> list[str]:
+    """Extract unique document names from semantic search tool output."""
+    if not semantic_result:
+        return []
+
+    documents: list[str] = []
+    seen: set[str] = set()
+
+    for source in SOURCE_PATTERN.findall(semantic_result):
+        filename = source.strip().replace("\\", "/").split("/")[-1]
+        match = re.match(r"(.+?\.[A-Za-z0-9]+)(?:_start_\d+)?$", filename)
+        doc_name = match.group(1) if match else filename
+
+        if doc_name and doc_name not in seen:
+            seen.add(doc_name)
+            documents.append(doc_name)
+
+    return documents
 
 class OCIOutageEnergyLLM:
     """ Agent using OCI libraries to provide outage and energy information """
@@ -55,6 +80,7 @@ class OCIOutageEnergyLLM:
         final_response_content = None
         final_model_state = None
         model_token_count = 0
+        source_documents: list[str] = []
 
         async for event in self._agent.astream(
             input=current_message,
@@ -76,6 +102,10 @@ class OCIOutageEnergyLLM:
                 tool_name = str(latest_update.name)
                 status_content = str(latest_update.content)
                 latest_update = f"Tool {tool_name} responded with:\n{status_content[:100]}...\n\nInformation passed to agent to build response"
+                if tool_name == "semantic_search":
+                    for document_name in extract_RAG_sources(status_content):
+                        if document_name not in source_documents:
+                            source_documents.append(document_name)
             elif isinstance(latest_update, AIMessage):
                 status_content = str(latest_update.content)
                 model_id = str(latest_update.response_metadata.get("model_id", ""))
@@ -107,5 +137,6 @@ class OCIOutageEnergyLLM:
             "content": f"{final_response_content}",
             "final_state": f"{str(final_response_content)[:100]}\n{final_model_state}",
             "token_count": str(model_token_count),
-            "suggestions": suggestions.model_dump_json()
+            "suggestions": suggestions.model_dump_json(),
+            "sources": json.dumps(source_documents)
         }

@@ -192,6 +192,7 @@ class DynamicGraphExecutor(AgentExecutor):
             final_parts.append(Part(root=TextPart(text=item['detailed_updates'])))
             final_parts.append(Part(root=TextPart(text=item['token_count'])))
             final_parts.append(Part(root=TextPart(text=item['suggestions'])))
+            final_parts.append(Part(root=TextPart(text=item['sources'])))
 
             logger.info("--- FINAL PARTS TO BE SENT ---")
             for i, part in enumerate(final_parts):
@@ -202,10 +203,6 @@ class DynamicGraphExecutor(AgentExecutor):
                     logger.info(f"    - Data: {str(part.root.data)[:200]}...")
             logger.info("-----------------------------")
         
-            #TODO: temp fix when agent missed the data update
-            if len(final_parts) < 7:
-                final_parts.insert(4,Part(root=TextPart(text="Temp place holder")))
-
             await updater.update_status(
                 TaskState.completed,
                 new_agent_parts_message(final_parts, task.context_id, task.id),
