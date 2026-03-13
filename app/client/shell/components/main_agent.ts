@@ -280,6 +280,17 @@ export class DynamicModule extends LitElement {
       margin-right: var(--space-xs);
     }
 
+    .source-link {
+      color: var(--agent-accent);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      word-break: break-word;
+    }
+
+    .source-link:hover {
+      color: var(--text-primary);
+    }
+
       .response-section {
         flex: 0 1 auto;
         overflow: visible;
@@ -627,7 +638,16 @@ export class DynamicModule extends LitElement {
       ${this.#maybeRenderData()}
       ${this.sources.length > 0 ? html`
         <div class="sources-floating">
-          <strong>Sources:</strong>${this.sources.join(", ")}
+          <strong>Sources:</strong>
+          ${this.sources.map((source, index) => html`
+            <a
+              class="source-link"
+              href=${this.#getSourceUrl(source)}
+              target="_blank"
+              rel="noopener noreferrer"
+              title=${`Open source document: ${source}`}
+            >${source}</a>${index < this.sources.length - 1 ? ", " : ""}
+          `)}
         </div>
       ` : ''}
       ${this.suggestions ? html`
@@ -670,6 +690,17 @@ export class DynamicModule extends LitElement {
         .split(",")
         .map((s) => s.replace(/^["'\s]+|["'\s]+$/g, "").trim())
         .filter((s) => s.length > 0);
+    }
+  }
+
+  #getSourceUrl(source: string): string {
+    const sourceFile = source.split(/[\\/]/).pop()?.trim() || source.trim();
+
+    try {
+      const serverBase = new URL(this.config.serverUrl || window.location.origin);
+      return `${serverBase.origin}/rag_docs/${encodeURIComponent(sourceFile)}`;
+    } catch {
+      return `/rag_docs/${encodeURIComponent(sourceFile)}`;
     }
   }
 

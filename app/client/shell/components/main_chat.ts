@@ -346,6 +346,17 @@ export class ChatModule extends LitElement {
       font-weight: var(--font-weight-bold);
       margin-right: var(--space-xs);
     }
+    
+    .source-link {
+      color: var(--oracle-primary);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      word-break: break-word;
+    }
+    
+    .source-link:hover {
+      color: var(--text-primary);
+    }
 
     .pending-indicator {
       align-self: flex-start;
@@ -525,7 +536,17 @@ export class ChatModule extends LitElement {
               ${msg.role === 'agent' && msg.sources && msg.sources.length > 0 ? html`
                 <div class="message-sources">
                   <span class="message-sources-title">Sources:</span>
-                  <span>${msg.sources.join(", ")}</span>
+                  <span>
+                    ${msg.sources.map((source, index) => html`
+                      <a
+                        class="source-link"
+                        href=${this.#getSourceUrl(source)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title=${`Open source document: ${source}`}
+                      >${source}</a>${index < msg.sources!.length - 1 ? ", " : ""}
+                    `)}
+                  </span>
                 </div>
               ` : ''}
             </div>
@@ -553,6 +574,17 @@ export class ChatModule extends LitElement {
       ` : ''}
       <status-drawer .items=${this.status} accentColor="var(--oracle-primary)"></status-drawer>
     `;
+  }
+  
+  #getSourceUrl(source: string): string {
+    const sourceFile = source.split(/[\\/]/).pop()?.trim() || source.trim();
+  
+    try {
+      const serverBase = new URL(this.defaultServerUrl);
+      return `${serverBase.origin}/rag_docs/${encodeURIComponent(sourceFile)}`;
+    } catch {
+      return `/rag_docs/${encodeURIComponent(sourceFile)}`;
+    }
   }
 }
 
