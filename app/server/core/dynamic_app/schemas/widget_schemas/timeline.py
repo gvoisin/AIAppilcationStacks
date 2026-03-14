@@ -1,3 +1,4 @@
+# region Component Definition
 WIDGET_NAME = "TimelineComponent"
 WIDGET_DESCRIPTION = """Component designed to show events over time.
 REQUIRED: dataPath with core timeline fields (date, title, optional description/category).
@@ -98,3 +99,5 @@ WIDGET_SCHEMA = """
     }}
   }}
 ]"""
+# endregion Component Definition
+

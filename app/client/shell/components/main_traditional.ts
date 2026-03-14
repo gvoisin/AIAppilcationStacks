@@ -9,6 +9,7 @@ import { ItemSelectEvent, KpiClickEvent } from "../ui/custom-components/detail-m
 
 registerShellComponents();
 
+// #region Component
 @customElement("static-module")
 export class StaticModule extends LitElement {
   @property({ type: String }) accessor currentTab = 'summary';
@@ -20,6 +21,7 @@ export class StaticModule extends LitElement {
 
   private processor = v0_8.Data.createSignalA2uiMessageProcessor();
 
+  // #region Data Loading
   connectedCallback() {
     super.connectedCallback();
     this.initializeData();
@@ -35,7 +37,7 @@ export class StaticModule extends LitElement {
       this.processor.processMessages(messages);
     } catch (error) {
       console.error('Failed to fetch outage data from server:', error);
-      // Fallback to static data for demo
+      // Fall back to local data if the server is unavailable.
       this.initializeStaticData();
     }
   }
@@ -77,16 +79,18 @@ export class StaticModule extends LitElement {
   private hasIndustry(): boolean {
     return !!this.processor.getData(this.component, "/industry/industryTable");
   }
+  // #endregion Data Loading
 
+  // #region Static Fallback Data
   private initializeStaticData() {
-    // Comprehensive static data for offline testing with all interactive features
+    // Static fallback data for offline testing.
     const messages: v0_8.Types.ServerToClientMessage[] = [
       {
         dataModelUpdate: {
           surfaceId: 'default',
           path: '/',
           contents: [
-            // KPI Data with detailed information
+            // KPI data
             {
               key: 'energyKPIs',
               valueMap: [
@@ -137,7 +141,7 @@ export class StaticModule extends LitElement {
                 ]}
               ]
             },
-            // Bar chart data
+            // Outage summary data
             {
               key: 'outageSummary',
               valueMap: [
@@ -158,7 +162,7 @@ export class StaticModule extends LitElement {
                 { key: '4', valueString: 'Monitoring' }
               ]
             },
-            // Custom details for each bar in the chart
+            // Per-bar details
             {
               key: 'outageSummaryDetails',
               valueMap: [
@@ -204,7 +208,7 @@ export class StaticModule extends LitElement {
                 ]}
               ]
             },
-            // Comprehensive outage table data
+            // Outage table
             {
               key: 'outageTable',
               valueMap: [
@@ -275,7 +279,7 @@ export class StaticModule extends LitElement {
                 ]}
               ]
             },
-            // Timeline events with detailed information
+            // Timeline events
             {
               key: 'timelineEvents',
               valueMap: [
@@ -329,7 +333,7 @@ export class StaticModule extends LitElement {
                 ]}
               ]
             },
-            // Map markers with detailed information
+            // Map markers
             {
               key: 'mapMarkers',
               valueMap: [
@@ -385,7 +389,7 @@ export class StaticModule extends LitElement {
                 ]}
               ]
             },
-            // Energy trends data (multi-series)
+            // Energy trends
             {
               key: 'trends',
               valueMap: [
@@ -475,7 +479,7 @@ export class StaticModule extends LitElement {
                 ]}
               ]
             },
-            // Timeline data
+            // Timeline
             {
               key: 'timeline',
               valueMap: [
@@ -521,7 +525,7 @@ export class StaticModule extends LitElement {
                 ]}
               ]
             },
-            // Industry data
+            // Industry metrics
             {
               key: 'industry',
               valueMap: [
@@ -576,6 +580,9 @@ export class StaticModule extends LitElement {
 
     this.processor.processMessages(messages);
   }
+  // #endregion Static Fallback Data
+
+  // #region Styles
   static styles = css`
     ${designTokensCSS}
     ${buttonStyles}
@@ -703,7 +710,9 @@ export class StaticModule extends LitElement {
       padding: var(--space-md);
     }
   `
+  // #endregion Styles
 
+  // #region Render
   render() {
     return html`
       <stat-bar .title=${"Outage Monitoring"} .time=${""} .tokens=${""} .configUrl=${"/outage_config"} .configType=${"traditional"} .configData=${outageConfig}></stat-bar>
@@ -724,7 +733,9 @@ export class StaticModule extends LitElement {
       ${this.renderNotification()}
     `
   }
+  // #endregion Render
 
+  // #region Notifications
   private renderNotification() {
     if (!this.showNotification) return null;
     return html`
@@ -746,8 +757,10 @@ export class StaticModule extends LitElement {
   private closeNotification() {
     this.showNotification = false;
   }
+  // #endregion Notifications
 
-  // Event handlers for interactive components
+  // #region Interaction Handlers
+  // Interaction handlers
   private handleItemSelect(e: CustomEvent) {
     const detail = e.detail;
     this.selectedItem = detail.item;
@@ -778,7 +791,9 @@ export class StaticModule extends LitElement {
     const { action, item } = e.detail;
     this.showNotify(`${action} action on: ${item.title}`);
   }
+  // #endregion Interaction Handlers
 
+  // #region Tab Rendering
   private switchTab(tab: string) {
     this.currentTab = tab;
   }
@@ -922,12 +937,16 @@ export class StaticModule extends LitElement {
       </div>
     `;
   }
+  // #endregion Tab Rendering
 
 
 }
+// #endregion Component
 
+// #region Element Registration
 declare global {
   interface HTMLElementTagNameMap {
     "static-module": StaticModule
   }
 }
+// #endregion Element Registration

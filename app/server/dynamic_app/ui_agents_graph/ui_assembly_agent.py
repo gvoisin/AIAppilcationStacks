@@ -13,10 +13,12 @@ from core.dynamic_app.prompts import get_ui_assembly_instructions
 
 logger = logging.getLogger(__name__)
 
-class UIAssemblyAgent:
-    """ Agent in charge of generating the ordered UI schemas from ui orchestrator """
 
-    #region helpers
+#region Assembly Agent
+class UIAssemblyAgent:
+    """Generates and validates ordered A2UI schemas from UI orchestrator output."""
+
+    #region Helper Methods
     def _inject_custom_schemas_into_schema(self, schema_str, custom_schemas, allowed_components=None):
         """Inject custom component schemas into the A2UI schema, optionally filtering to allowed components."""
         if not custom_schemas:
@@ -27,7 +29,6 @@ class UIAssemblyAgent:
             for custom_schema in custom_schemas:
                 if "name" in custom_schema and "schema" in custom_schema:
                     component_name = custom_schema["name"]
-                    # If allowed_components specified, only include those
                     if allowed_components and component_name.lower() not in [c.lower() for c in allowed_components]:
                         continue
                     component_schema = custom_schema["schema"]
@@ -40,15 +41,14 @@ class UIAssemblyAgent:
     def _extract_allowed_components(self, data: str) -> List[str]:
         """Extract the list of allowed component names from orchestrator output."""
         try:
-            # Try to parse as UIOrchestratorOutput JSON
             parsed = json.loads(data)
             if isinstance(parsed, dict) and 'widgets' in parsed:
-                # It's UIOrchestratorOutput format
                 return [widget.get('name', '').lower() for widget in parsed['widgets']]
         except (json.JSONDecodeError, TypeError):
             return ['bar-graph']
+    #endregion
 
-    #region agent logic
+    #region Setup
     def __init__(self, base_url: str = None, inline_catalog: List[dict] = None):
         self.base_url = base_url or "http://localhost:8000"
         self.inline_catalog = inline_catalog or []
@@ -57,12 +57,10 @@ class UIAssemblyAgent:
         self._client = self.gen_ai_provider.build_oci_client(model_id='xai.grok-4-fast-reasoning',model_kwargs={"temperature":0.7})
         self.agent_name = "assembly_agent"
 
-        # Initialize with no restrictions - will be set per call
         self.allowed_components = None
         self.system_prompt = None
         self.agent = None
 
-        # Schema will be loaded per call with filtering
         self.a2ui_schema_object = None
 
     def _build_agent(self):
@@ -72,7 +70,9 @@ class UIAssemblyAgent:
             system_prompt=self.system_prompt,
             name=self.agent_name
         )
+    #endregion
 
+    #region Runtime
     async def __call__(self, state: DynamicGraphState):
         """Call the UI assembly agent to generate and validate UI from orchestrator data."""
         orchestrator_data = state['messages'][-1].content
@@ -87,7 +87,6 @@ class UIAssemblyAgent:
             allowed_components
         )
 
-        # Load the A2UI_SCHEMA string into a Python object for validation
         try:
             single_message_schema = json.loads(self.A2UI_SCHEMA)
             self.a2ui_schema_object = {"type": "array", "items": single_message_schema}
@@ -103,10 +102,8 @@ class UIAssemblyAgent:
             self.inline_catalog, allowed_components
         )
 
-        # Build the agent with the restricted tools
         self.agent = self._build_agent()
 
-        # UI Validation and Retry Logic (adapted from old PresenterAgent)
         max_retries = 1  # Total 2 attempts (keeping retries as model can make mistakes)
         attempt = 0
         allowed_str = ", ".join(allowed_components) if allowed_components else "any available"
@@ -135,6 +132,7 @@ Only after calling all required tools, generate the final A2UI JSON response."""
                 ]
             }
 
+        #region Validation + Retry
         while attempt <= max_retries:
             attempt += 1
             logger.info(
@@ -145,7 +143,6 @@ Only after calling all required tools, generate the final A2UI JSON response."""
             response = await self.agent.ainvoke(messages)
             final_response_content = response['messages'][-1].content
 
-            #region a2ui validation
             is_valid = False
             error_message = ""
 
@@ -194,17 +191,14 @@ Only after calling all required tools, generate the final A2UI JSON response."""
                 logger.info(
                     f"--- UIAssemblyAgent: Response is valid. Returning final response (Attempt {attempt}). ---"
                 )
-                # Update the response with validated content
                 validated_response = response.copy()
                 validated_response['messages'][-1] = AIMessage(content=final_response_content)
                 return validated_response
 
-            # If here, validation failed
             if attempt <= max_retries:
                 logger.warning(
                     f"--- UIAssemblyAgent: Retrying... ({attempt}/{max_retries + 1}) ---"
                 )
-                # Prepare retry query
                 current_query_text = (
                     f"Your previous response was invalid. {error_message} "
                     "You MUST generate a valid response that strictly follows the A2UI JSON SCHEMA. "
@@ -212,9 +206,8 @@ Only after calling all required tools, generate the final A2UI JSON response."""
                     "Ensure the response is split by '---a2ui_JSON---' and the JSON part is well-formed. "
                     f"Please retry the original request: 'Orchestrator component selection: {orchestrator_data}\n\nData to visualize: {data_context}'"
                 )
-                # Loop continues for retry
+        #endregion
 
-        # If here, max retries exhausted
         logger.error(
             "--- UIAssemblyAgent: Max retries exhausted. Returning error. ---"
         )
@@ -226,10 +219,13 @@ Only after calling all required tools, generate the final A2UI JSON response."""
                 ))
             ]
         }
-    
+    #endregion
+#endregion
+
+
+#region Local Test Harness
 async def main():
     from langchain.messages import HumanMessage
-    # Define inline_catalog with BarGraph schema from register-components.ts
     inline_catalog = [
         {
             "name": "BarGraph",
@@ -258,3 +254,4 @@ async def main():
 if __name__ == "__main__":
     import asyncio
     asyncio.run(main())
+#endregion

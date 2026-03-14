@@ -3,15 +3,18 @@ import { customElement, property, state } from "lit/decorators.js";
 import { repeat } from "lit/directives/repeat.js";
 import { designTokensCSS } from "../theme/design-tokens.js";
 
+// #region Types
 export interface StatusItem {
   timestamp: number;
   duration: number;
   message: string;
   type: string;
 }
+// #endregion Types
 
 @customElement("status-drawer")
 export class StatusDrawer extends LitElement {
+  // #region Reactive Properties
   @property({ type: Array })
   accessor items: StatusItem[] = [];
 
@@ -20,7 +23,9 @@ export class StatusDrawer extends LitElement {
 
   @state()
   accessor expanded = false;
+  // #endregion Reactive Properties
 
+  // #region Styles
   static styles = css`
     ${designTokensCSS}
 
@@ -131,7 +136,7 @@ export class StatusDrawer extends LitElement {
       text-overflow: ellipsis;
     }
 
-    /* Latest status indicator when collapsed */
+    /* Show latest status when collapsed */
     .latest-status {
       font-size: var(--font-size-xs);
       color: var(--text-muted);
@@ -141,11 +146,15 @@ export class StatusDrawer extends LitElement {
       text-overflow: ellipsis;
     }
   `;
+  // #endregion Styles
 
+  // #region State Updates
   private toggle() {
     this.expanded = !this.expanded;
   }
+  // #endregion State Updates
 
+  // #region Render
   render() {
     const latestStatus = this.items.length > 0 ? this.items[this.items.length - 1] : null;
 
@@ -180,10 +189,13 @@ export class StatusDrawer extends LitElement {
       </div>
     `;
   }
+  // #endregion Render
 }
 
+// #region Element Registration
 declare global {
   interface HTMLElementTagNameMap {
     "status-drawer": StatusDrawer;
   }
 }
+// #endregion Element Registration

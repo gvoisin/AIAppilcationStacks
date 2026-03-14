@@ -46,6 +46,7 @@ class MockLLMExecutor(AgentExecutor):
             }
         )
 
+        # Keep part order aligned with the frontend parser expectations.
         final_parts = [
             Part(root=TextPart(text=content)),
             Part(root=TextPart(text=final_state)),
@@ -111,6 +112,7 @@ class MockDynamicExecutor(AgentExecutor):
             }
         )
 
+        # Keep part order aligned with the frontend parser expectations.
         final_parts = [
             Part(root=TextPart(text=content)),
             Part(root=TextPart(text=detailed_updates)),

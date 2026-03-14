@@ -48,7 +48,7 @@ def main(host, port, mock):
         if mock:
             logger.warning("Starting server in mock mode (no OCI credentials required)")
 
-        #region Agent executor setup
+        # region Agent executor setup
         agent_base_url = f"{base_url}/agent"
         agent_card = AgentCard(
             name="Energy Outage Agent",
@@ -82,8 +82,9 @@ def main(host, port, mock):
         )
 
         agent_app = agent_server.build()
+        # endregion
 
-        #region LLM executor setup
+        # region LLM executor setup
         llm_base_url = f"{base_url}/llm"
         llm_capabilities = dynamic_agent_capabilities
         llm_skills = []
@@ -113,8 +114,9 @@ def main(host, port, mock):
             agent_card=llm_card, http_handler=llm_request_handler
         )
         llm_app = llm_server.build()
+        # endregion
 
-        #region main app setup
+        # region Main app setup
         main_app = Starlette()
 
         main_app.add_middleware(
@@ -125,7 +127,7 @@ def main(host, port, mock):
             allow_headers=["*"],
         )
 
-        #region config endpoints
+        # region Config endpoints
         async def get_config(request: Request):
             config = agent_executor.get_config()
             return JSONResponse(config)
@@ -144,8 +146,9 @@ def main(host, port, mock):
         async def delete_config(request: Request):
             agent_executor.reset_config()
             return JSONResponse({"status": "success", "message": "Configuration reset to default"})
+        # endregion
 
-        #region traditional endpoints
+        # region Traditional endpoints
         async def get_traditional_outage(request: Request):
             try:
                 messages = await get_traditional_outage_messages()
@@ -185,8 +188,9 @@ def main(host, port, mock):
             except Exception as e:
                 logger.error(f"Error getting traditional timeline data: {e}")
                 return JSONResponse({"error": "Failed to retrieve timeline data"}, status_code=500)
+        # endregion
 
-        #region app mount
+        # region Route registration and app mount
         main_app.add_route("/agent/config", get_config, methods=["GET"])
         main_app.add_route("/agent/config", post_config, methods=["POST"])
         main_app.add_route("/agent/config", delete_config, methods=["DELETE"])
@@ -203,6 +207,8 @@ def main(host, port, mock):
 
         main_app.mount("/agent", agent_app)
         main_app.mount("/llm", llm_app)
+        # endregion
+        # endregion
 
         import uvicorn
         uvicorn.run(main_app, host=host, port=port)

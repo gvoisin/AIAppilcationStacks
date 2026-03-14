@@ -1,5 +1,6 @@
 """Prompts for the UI Assembly Agent."""
 
+# region Prompt Builders
 def get_ui_assembly_instructions(allowed_components, data_context):
     """Get the appropriate UI assembly instructions based on data availability."""
 
@@ -275,3 +276,4 @@ MANDATORY TOOLS USAGE:
 Generate a complete, valid A2UI message array that uses ONLY the allowed components from the orchestrator selection and follows the EXACT predefined schema structures from the tools.
 Include rich, contextual details extracted from the data context to maximize information value for all components.
 """
+# endregion Prompt Builders

@@ -1,3 +1,4 @@
+# region Component Definition
 COMPONENT_NAME = "Image"
 COMPONENT_DESCRIPTION = "Displays images with configurable sizing, fitting options, and usage hints for different contexts."
 EXAMPLE_A2UI_MESSAGE = """
@@ -17,3 +18,5 @@ EXAMPLE_A2UI_MESSAGE = """
     }}
   }}
 ]"""
+# endregion Component Definition
+

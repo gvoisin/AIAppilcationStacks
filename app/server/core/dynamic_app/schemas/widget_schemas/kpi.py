@@ -1,3 +1,4 @@
+# region Component Definition
 WIDGET_NAME = "KpiCard"
 WIDGET_DESCRIPTION = """Component designed to display key performance indicators in card format with values, labels, icons, change indicators, and detailed information in a pop-out panel.
 REQUIRED: dataPath (path to KPI data object with label and value).
@@ -97,3 +98,5 @@ WIDGET_SCHEMA = """
     }}
   }}
 ]"""
+# endregion Component Definition
+

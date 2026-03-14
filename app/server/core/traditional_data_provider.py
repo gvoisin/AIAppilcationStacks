@@ -1,5 +1,6 @@
 """Data provider for traditional application - contains comprehensive data independently"""
 
+# region Static Data
 # Outage data for traditional application
 OUTAGE_DATA = {
     "outages": [
@@ -170,10 +171,12 @@ INDUSTRY_DATA = {
         "top_performing_industry": "Technology"
     }
 }
+# endregion Static Data
 
+# region Accessors
 async def get_traditional_outage_data():
     """Get traditional outage data - independent from other applications"""
-    # Return a copy to prevent external modifications
+    # Return a copy to prevent external modifications.
     import json
     return json.loads(json.dumps(OUTAGE_DATA))
 
@@ -186,3 +189,4 @@ async def get_traditional_industry_data():
     """Get traditional industry data - independent from other applications"""
     import json
     return json.loads(json.dumps(INDUSTRY_DATA))
+# endregion Accessors

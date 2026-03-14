@@ -1,11 +1,14 @@
+# region Imports
 from abc import ABC
 from langchain.agents import create_agent
 from langgraph.checkpoint.memory import InMemorySaver
 
 from core.gen_ai_provider import GenAIProvider
+# endregion Imports
 
+# region Classes
 class BaseAgent(ABC):
-    """template for agents, may require rebuild"""
+    """Base template for agent wrappers."""
 
     def __init__(self):
         self.gen_ai_provider = GenAIProvider()
@@ -13,7 +16,7 @@ class BaseAgent(ABC):
         self.agent_name = "backend_orchestrator"
         self.system_prompt = ''
         self.tools = []
-        # each subclass must build the agent to overwrite
+        # Subclasses set this with build_agent().
         self.agent = None
 
     def build_agent(self):
@@ -25,3 +28,4 @@ class BaseAgent(ABC):
             name=self.agent_name,
             checkpointer=InMemorySaver()
         )
+# endregion Classes

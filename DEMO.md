@@ -31,9 +31,6 @@ This file includes different options to test out the LLM and Agent applications 
 
 ### Side by side comparison
 
-0. General
-    - Map outage locations and overlay EPA recommended response zones. (also good to see text vs map)
-
 1. Relational DB queries:
     - What are the most common outage cause categories in the last 6 months? (good text vs bar graph approach)
     - Find circuits with the highest number of customers served (agent fails on retrieve data sometimes)

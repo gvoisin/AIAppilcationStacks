@@ -35,6 +35,7 @@ import { AppConfig } from "../configs/types.js";
 import { config as restaurantConfig } from "../configs/restaurant.js";
 import { agentConfig } from "../configs/agent_config.js";
 
+// #region Component
 @customElement("dynamic-module")
 export class DynamicModule extends LitElement {
   @provide({ context: UI.Context.themeContext })
@@ -100,6 +101,7 @@ export class DynamicModule extends LitElement {
   @state()
   accessor #totalDuration: number = 0;
 
+  // #region Internal Services
   #processor = v0_8.Data.createSignalA2uiMessageProcessor();
   #loadingInterval: number | undefined;
   #stopwatchInterval: number | undefined;
@@ -108,7 +110,9 @@ export class DynamicModule extends LitElement {
     message: SnackbarMessage;
     replaceAll: boolean;
   }> = [];
+  // #endregion Internal Services
 
+  // #region Styles
   static styles = [
     unsafeCSS(v0_8.Styles.structuralStyles),
     css`
@@ -321,7 +325,9 @@ export class DynamicModule extends LitElement {
       }
     `,
   ]
+  // #endregion Styles
 
+  // #region Lifecycle
   connectedCallback() {
     super.connectedCallback();
 
@@ -361,7 +367,9 @@ export class DynamicModule extends LitElement {
       });
     }
   }
+  // #endregion Lifecycle
 
+  // #region Loading State
   #startLoadingAnimation() {
     if (
       Array.isArray(this.config.loadingText) &&
@@ -400,7 +408,9 @@ export class DynamicModule extends LitElement {
     }
     this.#currentElapsedTime = null;
   }
+  // #endregion Loading State
 
+  // #region Streaming - Parsing
   // TODO: move this mapping logic into a typed router helper.
   private updateStatusFromStreamingEvent(event: any) {
     if (event.serverUrl !== this.config.serverUrl) return;
@@ -460,7 +470,8 @@ export class DynamicModule extends LitElement {
     else {
       this.#addStatusWithDuration(`Event type: ${event.kind || 'unknown'}`, event.kind);
     }
-  }  // Compute step duration from the previous status timestamp.
+  }
+  // Compute step duration from the previous status timestamp.
   #addStatusWithDuration(message: string, type: string) {
     const now = Date.now();
     const lastStatus = this.status[this.status.length - 1];
@@ -548,6 +559,9 @@ export class DynamicModule extends LitElement {
       }
     }
   }
+  // #endregion Streaming And Parsing
+
+  // #region Notifications
   snackbar(
     message: string | HTMLTemplateResult,
     type: SnackType,
@@ -589,7 +603,9 @@ export class DynamicModule extends LitElement {
 
     this.#snackbar.hide(id);
   }
+  // #endregion Notifications
 
+  // #region Render
   render() {
     return html`
       <stat-bar
@@ -792,7 +808,9 @@ export class DynamicModule extends LitElement {
   #renderStatusWindow() {
     return html`<status-drawer .items=${this.status} accentColor="var(--agent-accent)"></status-drawer>`;
   }
+  // #endregion Render
 
+  // #region Actions
   async #sendUserActionMessage(message: v0_8.Types.A2UIClientEventMessage) {
     if (!this.router) return;
     try {
@@ -806,12 +824,16 @@ export class DynamicModule extends LitElement {
       this.snackbar(err as string, SnackType.ERROR);
     }
   }
+  // #endregion Actions
 }
+// #endregion Component
 
+// #region Element Registration
 declare global {
   interface HTMLElementTagNameMap {
     "dynamic-module": DynamicModule
   }
 }
+// #endregion Element Registration
 
 

@@ -1,21 +1,24 @@
-import os 
+import os
 import array
 import oracledb
 from contextlib import contextmanager
 from dotenv import load_dotenv
 load_dotenv()
 
+
+#region Database Connection Manager
 class RAGDBConnection:
     """Singleton for database connection pool and operations."""
     _instance = None
     _initialized = False
     _pool = None
-    
+
+    #region Lifecycle
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
-    
+
     def __init__(self):
         if RAGDBConnection._initialized:
             return
@@ -28,7 +31,9 @@ class RAGDBConnection:
         self._wallet_location = os.getenv("DB_WALLET_PATH")
         self._wallet_password = os.getenv("DB_WALLET_PASSWORD")
         self.table_prefix = "edge_demo"
-    
+    #endregion
+
+    #region Pool + Connection
     def _get_pool(self) -> oracledb.ConnectionPool:
         """Get or create the connection pool (lazy initialization)."""
         if RAGDBConnection._pool is None:
@@ -44,7 +49,7 @@ class RAGDBConnection:
                 increment=1,
             )
         return RAGDBConnection._pool
-    
+
     @contextmanager
     def get_connection(self):
         """Context manager for acquiring a connection from the pool.
@@ -59,7 +64,9 @@ class RAGDBConnection:
             yield conn
         finally:
             pool.release(conn)
+    #endregion
 
+    #region Direct Connection Helpers
     def connect_db(self) -> oracledb.Connection:
         try:
             return oracledb.connect(
@@ -73,14 +80,16 @@ class RAGDBConnection:
         except oracledb.Error as exc:
             print(f"ERROR: DB connection failed: {exc}")
             raise exc
-    
+
     def disconnect(self, connection: oracledb.Connection):
         connection.close()
-    
+
     def get_cursor(self):
         self.db_connection = self.connect_db()
         self.cursor = self.db_connection.cursor()
+    #endregion
 
+    #region Query Operations
     def execute_query(self, conn: oracledb.Connection, sql: str):
         """Execute SQL query and return column names and rows."""
         with conn.cursor() as cur:
@@ -91,7 +100,7 @@ class RAGDBConnection:
         """Drop and create embedding table."""
         print("Creating table for embeddings...")
 
-        # Use the prefix to avoid usage of the same table per user
+        # Prefix keeps per-user/demo data isolated in shared environments.
         sql_statements = [
             f"DROP TABLE {self.table_prefix}_embedding PURGE",
             f"""
@@ -113,7 +122,8 @@ class RAGDBConnection:
 
     def insert_embedding(self, conn: oracledb.Connection, embeddings, texts, splits):
         for i, emb in enumerate(embeddings):
-            chunk_text = texts[i][:3900]  # ensure within VARCHAR2(4000) limit according to table constraint
+            # Keep margin under VARCHAR2(4000) to avoid overflow on inserts.
+            chunk_text = texts[i][:3900]
             metadata_source = f"{splits[i].metadata.get('source', 'pdf-doc')}_start_{splits[i].metadata.get('start_index', 0)}"
 
             with conn.cursor() as cur:
@@ -123,3 +133,5 @@ class RAGDBConnection:
                 )
 
         conn.commit()
+    #endregion
+#endregion

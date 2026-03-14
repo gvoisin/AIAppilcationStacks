@@ -1,3 +1,4 @@
+# region Component Definition
 WIDGET_NAME = "LineGraph"
 WIDGET_DESCRIPTION = """Component designed to display line charts with multiple series, showing trends over time or categories.
 REQUIRED: labelPath (x-axis labels), seriesPath (series with name, color, values).
@@ -120,3 +121,5 @@ WIDGET_SCHEMA = """
     }}
   }}
 ]"""
+# endregion Component Definition
+

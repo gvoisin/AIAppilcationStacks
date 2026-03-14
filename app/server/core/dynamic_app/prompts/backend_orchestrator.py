@@ -1,5 +1,6 @@
 """Prompts for the Backend Orchestrator Agent."""
 
+# region Prompt Templates
 BACKEND_ORCHESTRATOR_INSTRUCTIONS = """
 You are a backend orchestrator agent responsible for coordinating data collection from various worker agents.
 Your role is to:
@@ -108,3 +109,4 @@ Return the data in this flexible format (only include sections for tools that we
 
 If a tool was called but returned no useful data, include the section with an appropriate message such as "No data available - [specific reason based on tool response]". Only use "no data available" when the tool was attempted but failed to provide relevant information, or when all tool attempts failed. Do not include sections for tools that were not called, as they are not relevant to the query.
 """
+# endregion Prompt Templates

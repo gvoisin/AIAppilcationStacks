@@ -1,3 +1,4 @@
+# region Component Definition
 COMPONENT_NAME = "Button"
 COMPONENT_DESCRIPTION = "Interactive button component that can trigger client-side actions when clicked."
 EXAMPLE_A2UI_MESSAGE = """
@@ -18,3 +19,5 @@ EXAMPLE_A2UI_MESSAGE = """
     }}
   }}
 ]"""
+# endregion Component Definition
+

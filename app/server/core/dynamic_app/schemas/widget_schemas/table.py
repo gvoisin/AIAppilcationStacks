@@ -1,3 +1,4 @@
+# region Component Definition
 WIDGET_NAME = "Table"
 WIDGET_DESCRIPTION = """Component designed to display tabular data with configurable columns.
 REQUIRED: dataPath (path to array of record objects), columns (header/field/type definitions).
@@ -85,3 +86,5 @@ WIDGET_SCHEMA = """
     }}
   }}
 ]"""
+# endregion Component Definition
+

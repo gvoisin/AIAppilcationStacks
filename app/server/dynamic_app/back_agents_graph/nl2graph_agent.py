@@ -10,6 +10,7 @@ from core.dynamic_app.prompts.graph_agent import GRAPH_SCHEMA_DESCRIPTION, GRAPH
 
 logger = logging.getLogger(__name__)
 
+#region Agent Definition
 class NL2GraphAgent(BaseAgent):
     """Agent for natural language to PGQL translation and execution."""
 
@@ -69,15 +70,17 @@ class NL2GraphAgent(BaseAgent):
                     logger.warning(f"Retrying due to error: {e}")
 
         return {"output": f"Error executing NL2Graph after {max_attempts} attempts: {str(last_error)}"}
+#endregion
 
 
+#region Tool Wrapper
 def create_nl2graph_agent():
-    """Instantiate to call"""
+    """Build an NL2Graph agent instance."""
     return NL2GraphAgent()
 
 @tool()
 async def call_graphDB(query: str) -> str:
-    """ Tool to call the graphDB with information about outage network, grid, voltaje, customers, etc. using NL to query"""
+    """Query the graph database for outage, grid, voltage, and customer information."""
     NL2Graph_agent_tool = create_nl2graph_agent()
 
     try:
@@ -85,3 +88,4 @@ async def call_graphDB(query: str) -> str:
         return result['output']
     except Exception as e:
         return f"There was an error with the Graph DB tool: {e}"
+#endregion

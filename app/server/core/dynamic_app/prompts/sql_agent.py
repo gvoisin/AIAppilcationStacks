@@ -1,5 +1,8 @@
+# region Imports
 import textwrap
+# endregion Imports
 
+# region Prompt Templates
 SQL_SCHEMA_DESCRIPTION = textwrap.dedent(
     """
     You are an expert Oracle SQL generator. The user asks questions about
@@ -99,3 +102,4 @@ SQL_FEW_SHOT_EXAMPLES = [
         ),
     },
 ]
+# endregion Prompt Templates

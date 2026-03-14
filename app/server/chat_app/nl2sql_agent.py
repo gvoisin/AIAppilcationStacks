@@ -10,6 +10,8 @@ from core.chat_app.prompts.sql_agent import SQL_SCHEMA_DESCRIPTION, SQL_FEW_SHOT
 
 logger = logging.getLogger(__name__)
 
+
+#region Agent Definition
 class NL2SQLAgent(BaseAgent):
     """Agent for natural language to SQL translation and execution."""
 
@@ -65,20 +67,21 @@ class NL2SQLAgent(BaseAgent):
             except Exception as e:
                 last_error = e
                 if attempt < max_attempts - 1:
-                    # Help model to remember query with error information
                     question = f"Original question: {original_question}\n\nYour previous query:\n{generated_sql}\n\nhad a mistake that resulted in an error: {e}. Fix the mistakes and consider the examples provided to solve the user question."
                     logger.warning(f"Retrying due to error: {e}")
         
         return {"output": f"Error executing NL2SQL after {max_attempts} attempts: {str(last_error)}"}
+#endregion
 
 
+#region Tool Wrapper
 def create_nl2sql_agent():
-    """Instantiate to call"""
+    """Build an NL2SQL agent instance."""
     return NL2SQLAgent()
 
 @tool()
 async def call_SQL_DB(query: str) -> str:
-    """ Tool to call the SQL DB with information about outage network, grid, voltaje, customers, etc. using NL to query"""
+    """Query the SQL DB for outage, grid, voltage, and customer information."""
     NL2SQL_agent_tool = create_nl2sql_agent()
 
     try:
@@ -86,3 +89,4 @@ async def call_SQL_DB(query: str) -> str:
         return result['output']
     except Exception as e:
         return f"There was an error with the SQL DB tool: {e}"
+#endregion

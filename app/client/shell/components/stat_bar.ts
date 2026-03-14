@@ -5,6 +5,7 @@ import { designTokensCSS } from "../theme/design-tokens.js";
 
 import "./config_canvas.js";
 
+// #region Component
 @customElement("stat-bar")
 export class StatBar extends LitElement {
   @property({ type: String })
@@ -25,6 +26,7 @@ export class StatBar extends LitElement {
   @property({ type: Object })
   accessor configData: ConfigData = {};
 
+  // #region Styles
   static styles = css`
     ${designTokensCSS}
 
@@ -79,7 +81,9 @@ export class StatBar extends LitElement {
         align-items: center;
     }
   `;
+  // #endregion Styles
 
+  // #region Render
   render() {
     return html`
       <div class="stat-bar">
@@ -92,10 +96,14 @@ export class StatBar extends LitElement {
       </div>
     `;
   }
+  // #endregion Render
 }
+// #endregion Component
 
+// #region Element Registration
 declare global {
   interface HTMLElementTagNameMap {
     "stat-bar": StatBar;
   }
 }
+// #endregion Element Registration

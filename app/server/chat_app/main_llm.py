@@ -1,4 +1,3 @@
-import logging
 import os
 import re
 import json
@@ -6,7 +5,7 @@ from collections.abc import AsyncIterable
 from typing import Any
 from langchain.agents import create_agent
 from langchain_oci import ChatOCIGenAI
-from langchain.messages import HumanMessage, AIMessage, AnyMessage, ToolMessage
+from langchain.messages import HumanMessage, AIMessage, ToolMessage
 from langgraph.graph.state import CompiledStateGraph
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import InMemorySaver
@@ -18,12 +17,10 @@ from core.common_struct import SUGGESTION_QUERY
 from chat_app.rag_tool import semantic_search
 from chat_app.nl2sql_agent import call_SQL_DB
 
-logger = logging.getLogger(__name__)
-
-
 SOURCE_PATTERN = re.compile(r"\(Source:\s*([^)]+)\)")
 
 
+#region Utilities
 def extract_RAG_sources(semantic_result: str) -> list[str]:
     """Extract unique document names from semantic search tool output."""
     if not semantic_result:
@@ -42,12 +39,16 @@ def extract_RAG_sources(semantic_result: str) -> list[str]:
             documents.append(doc_name)
 
     return documents
+#endregion
 
+
+#region Main Agent
 class OCIOutageEnergyLLM:
-    """ Agent using OCI libraries to provide outage and energy information """
+    """LLM agent that handles outage and energy requests."""
 
     SUPPORTED_CONTENT_TYPES = ["text", "text/plain", "text/event-stream"]
 
+    #region Setup
     def __init__(self):
         self._agent = self._build_agent()
         self._user_id = "remote_llm"
@@ -71,9 +72,11 @@ class OCIOutageEnergyLLM:
             name="outage_energy_llm",
             checkpointer= InMemorySaver()
         )
+    #endregion
     
+    #region Streaming
     async def oci_stream(self, query, session_id) -> AsyncIterable[dict[str, Any]]:
-        """ Function to call agent and stream responses """
+        """Call the agent and stream intermediate and final responses."""
         
         current_message = {"messages":[HumanMessage(query)]}
         config:RunnableConfig = {"run_id":str(session_id), "configurable": {"thread_id": str(session_id)}}
@@ -129,7 +132,6 @@ class OCIOutageEnergyLLM:
                     status_content = str(latest_update.content)
                     update_text = f"Model processing:\n{status_content[:100]}..."
 
-                # Yield intermediate updates on every attempt
                 yield {
                     "is_task_complete": False,
                     "updates": update_text
@@ -146,3 +148,5 @@ class OCIOutageEnergyLLM:
             "suggestions": suggestions.model_dump_json(),
             "sources": json.dumps(source_documents)
         }
+    #endregion
+#endregion

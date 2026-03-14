@@ -1,14 +1,19 @@
 """ This file provides the agent a2a configurations for all the modules """
 
+# region Imports
 from a2a.types import AgentCapabilities, AgentSkill
 from a2ui.extension.a2ui_extension import get_a2ui_agent_extension
+# endregion Imports
 
+# region Capabilities
 dynamic_agent_capabilities = AgentCapabilities(
     streaming=True,
     push_notifications=True,
     extensions=[get_a2ui_agent_extension()],
 )
+# endregion Capabilities
 
+# region Skills
 get_widget_catalog = AgentSkill(
     id="get_widget_catalog",
     name="get_widget_catalog",
@@ -24,3 +29,4 @@ get_widget_schema = AgentSkill(
     tags=["widget", "info"],
     examples=["Give me the template of bar-graph widget"],
 )
+# endregion Skills

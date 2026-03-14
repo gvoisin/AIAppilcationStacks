@@ -1,4 +1,4 @@
-""" This is the overall graph executor for the dynamic application """
+"""Overall graph executor for the dynamic application."""
 import json
 import logging
 import copy
@@ -18,7 +18,6 @@ from a2a.types import (
 )
 from a2a.utils import (
     new_agent_parts_message,
-    new_agent_text_message,
     new_task,
 )
 from a2a.utils.errors import ServerError
@@ -28,9 +27,12 @@ from core.dynamic_app.dynamic_struct import AgentConfig, CONFIG_SCHEMA, DEFAULT_
 
 logger = logging.getLogger(__name__)
 
-class DynamicGraphExecutor(AgentExecutor):
-    """Executor of a full graph"""
 
+#region Executor
+class DynamicGraphExecutor(AgentExecutor):
+    """Executor for the full dynamic graph pipeline."""
+
+    #region Lifecycle
     def __init__(self, base_url: str):
         self.default_config = copy.deepcopy(DEFAULT_CONFIG)
         self.current_config = copy.deepcopy(self.default_config)
@@ -49,9 +51,11 @@ class DynamicGraphExecutor(AgentExecutor):
             base_url=self.base_url,
             use_ui=False,
             graph_configuration=self.current_config,
-            inline_catalog=None  # Will be set at execution time
+            inline_catalog=None
         )
+    #endregion
 
+    #region Main Execution
     async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
         query = ""
         ui_event_part = None
@@ -61,7 +65,6 @@ class DynamicGraphExecutor(AgentExecutor):
         logger.info(f"--- Client requested extensions: {context.requested_extensions} ---")
         use_ui = try_activate_a2ui_extension(context)
 
-        # Determine which agent to use based on whether the a2ui extension is active.
         if use_ui:
             agent = self.ui_dynamic_graph
             await agent.build_graph()
@@ -85,12 +88,10 @@ class DynamicGraphExecutor(AgentExecutor):
                         logger.info(f"  Part {i}: Found 'request' in DataPart.")
                         query = part.root.data["request"]
 
-                        # Check for inline catalog
                         if "metadata" in part.root.data and "inlineCatalogs" in part.root.data["metadata"]:
                              logger.info(f"  Part {i}: Found 'inlineCatalogs' in DataPart.")
                              inline_catalog = part.root.data["metadata"]["inlineCatalogs"]
 
-                        # Extract session ID from metadata
                         if "metadata" in part.root.data and "sessionId" in part.root.data["metadata"]:
                             session_id = part.root.data["metadata"]["sessionId"]
                             logger.info(f"  Part {i}: Found sessionId in metadata: {session_id}")
@@ -101,7 +102,6 @@ class DynamicGraphExecutor(AgentExecutor):
                 else:
                     logger.info(f"  Part {i}: Unknown part type ({type(part.root)})")
 
-        # Set inline catalog on the agents
         if use_ui:
             self.ui_dynamic_graph.inline_catalog = inline_catalog
         else:
@@ -112,7 +112,6 @@ class DynamicGraphExecutor(AgentExecutor):
 
         if ui_event_part:
             logger.info(f"Received a2ui ClientEvent: {ui_event_part}")
-            # Support both new and legacy payloads.
             action = ui_event_part.get("name") or ui_event_part.get("actionName")
             surface_id = ui_event_part.get("surfaceId")
             source_component_id = ui_event_part.get("sourceComponentId")
@@ -128,7 +127,6 @@ class DynamicGraphExecutor(AgentExecutor):
                 ctx,
             )
 
-            # Handle UI interaction events for energy/outage data
             query = f"User submitted an event: {action} with data: {ctx}"
         else:
             if not query:
@@ -147,7 +145,6 @@ class DynamicGraphExecutor(AgentExecutor):
         memory_id = session_id if session_id else task.context_id
         logger.info(f"--- AGENT_EXECUTOR: Using memory ID: {memory_id} ---")
 
-        # MAIN execution method
         async for item in agent.call_dynamic_ui_graph(query, memory_id):
             is_task_complete = item["is_task_complete"]
             if not is_task_complete:
@@ -179,7 +176,6 @@ class DynamicGraphExecutor(AgentExecutor):
                             for message in json_data:
                                 final_parts.append(create_a2ui_part(message))
                         else:
-                            # Handle the case where a single JSON object is returned
                             logger.info("Received a single JSON object. Creating a DataPart.")
                             final_parts.append(create_a2ui_part(json_data))
 
@@ -209,15 +205,18 @@ class DynamicGraphExecutor(AgentExecutor):
                 final=True,
             )
             break
+    #endregion
 
+    #region Cancellation
     async def cancel(
         self, request: RequestContext, event_queue: EventQueue
     ) -> Task | None:
         raise ServerError(error=UnsupportedOperationError())
+    #endregion
 
-    # region helper config
+    #region Config Helpers
     def get_config(self) -> dict:
-        """Get current configuration as dict"""
+        """Get current configuration as a serializable dictionary."""
         return {k: asdict(v) for k, v in self.current_config.items()}
 
     def update_config(self, new_config: dict) -> tuple[bool, str]:
@@ -226,18 +225,14 @@ class DynamicGraphExecutor(AgentExecutor):
         Returns (success, error_message)
         """
         try:
-            # Validate JSON schema
             jsonschema.validate(instance=new_config, schema=CONFIG_SCHEMA)
 
-            # Convert to AgentConfig objects
             config_objects = {}
             for agent_name, agent_data in new_config.items():
                 config_objects[agent_name] = AgentConfig(**agent_data)
 
-            # Update current config
             self.current_config = config_objects
 
-            # Recreate graphs with new config
             self._recreate_graphs()
 
             logger.info("Configuration updated successfully")
@@ -257,3 +252,5 @@ class DynamicGraphExecutor(AgentExecutor):
         self.current_config = copy.deepcopy(self.default_config)
         self._recreate_graphs()
         logger.info("Configuration reset to default")
+    #endregion
+#endregion

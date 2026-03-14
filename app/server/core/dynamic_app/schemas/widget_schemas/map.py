@@ -1,3 +1,4 @@
+# region Component Definition
 WIDGET_NAME = "MapComponent"
 WIDGET_DESCRIPTION = "Interactive map component to display location markers with a side panel showing marker details. Each marker requires coordinates (latitude/longitude), a name, and optionally: description, status, and any additional key-value pairs that will be displayed as details in the side panel when a marker is selected. For consistent userAction handling, MapComponent should define action.name as 'flag_circuit' for the flag button interaction."
 WIDGET_SCHEMA = """
@@ -100,3 +101,5 @@ WIDGET_SCHEMA = """
     }}
   }}
 ]"""
+# endregion Component Definition
+

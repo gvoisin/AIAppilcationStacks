@@ -1,3 +1,4 @@
+# region Component Definition
 WIDGET_NAME = "BarGraph"
 WIDGET_DESCRIPTION = """Interactive bar chart component for comparing data values with category labels.
 REQUIRED: dataPath (path to numeric values array), labelPath (path to category labels array).
@@ -79,3 +80,5 @@ WIDGET_SCHEMA = """
     }}
   }}
 ]"""
+# endregion Component Definition
+

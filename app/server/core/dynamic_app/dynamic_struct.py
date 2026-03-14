@@ -1,9 +1,13 @@
 """ File to store the common pydantic classes or struct configs """
+
+# region Imports
 from typing import TypedDict, List, Optional
 from pydantic import BaseModel, Field
 from dataclasses import dataclass
 from langgraph.graph import MessagesState
+# endregion Imports
 
+# region Types
 class Skill(TypedDict):
     """A skill that can be progressively disclosed to the agent."""
     name: str  # Unique identifier for the skill
@@ -18,7 +22,9 @@ class DynamicGraphState(MessagesState):
     """ Class that holds the dynamic graph state """
     suggestions: str
 
-# Data class for better json handling
+# endregion Types
+
+# region Config Models
 @dataclass
 class AgentConfig:
     """Configuration for an agent"""
@@ -27,7 +33,9 @@ class AgentConfig:
     name: str
     system_prompt: Optional[str]
     tools_enabled: List[str]
+# endregion Config Models
 
+# region Schemas
 # JSON Schema for validating AgentConfig
 AGENT_CONFIG_SCHEMA = {
     "type": "object",
@@ -50,7 +58,9 @@ CONFIG_SCHEMA = {
     },
     "additionalProperties": False
 }
+# endregion Schemas
 
+# region Defaults
 # Default agent config
 DEFAULT_CONFIG = {
         "data_orchestrator_agent": AgentConfig(
@@ -82,11 +92,13 @@ DEFAULT_CONFIG = {
             tools_enabled=[]
         )
     }
+# endregion Defaults
 
-# Exception for the config graph
+# region Exceptions
 class AgentGraphException(Exception):
     """ Exception for missing graph configs """
 
     def __init__(self, message="Missing configuration dictionary for graph"):
         self.message = message
         super().__init__(self.message)
+# endregion Exceptions

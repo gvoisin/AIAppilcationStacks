@@ -1,18 +1,21 @@
-""" this file is for giving the client side the information about outages """
+"""Data providers that map traditional outage/energy data into A2A message payloads."""
 from core.traditional_data_provider import (
     get_traditional_outage_data,
     get_traditional_energy_data,
     get_traditional_industry_data
 )
 
-# Hardcoded coordinates for locations (lat, lng)
+#region Constants
 LOCATION_COORDINATES = {
     "Downtown Seattle, WA": (47.6062, -122.3321),
     "Portland Suburb, OR": (45.5152, -122.6784),
     "San Francisco Bay Area, CA": (37.7749, -122.4194),
     "Los Angeles Downtown, CA": (34.0522, -118.2437)
 }
+#endregion
 
+
+#region Outage Dashboard
 async def get_traditional_outage_messages():
     """Get formatted initial outage data as A2A ServerToClientMessage array"""
 
@@ -21,7 +24,6 @@ async def get_traditional_outage_messages():
     outages = data["outages"]
     total_outages = data["total_outages"]
 
-    # Count outages by status (including Monitoring)
     status_counts = {"Active": 0, "Investigating": 0, "Resolved": 0, "Scheduled": 0, "Monitoring": 0}
     for outage in outages:
         status = outage.get("status", "Active")
@@ -44,7 +46,6 @@ async def get_traditional_outage_messages():
         {"key": "4", "valueString": "Monitoring"}
     ]
 
-    # Build detailed information for each status category
     active_outages_list = [o for o in outages if o.get("status") == "Active"]
     investigating_outages_list = [o for o in outages if o.get("status") == "Investigating"]
     resolved_outages_list = [o for o in outages if o.get("status") == "Resolved"]
@@ -167,7 +168,6 @@ async def get_traditional_outage_messages():
 
     energy_data = await get_traditional_energy_data()
 
-    # Calculate some derived values
     active_outages = status_counts["Active"] + status_counts["Investigating"]
     customers_affected = sum(outage["affected_customers"] for outage in outages)
 
@@ -259,7 +259,10 @@ async def get_traditional_outage_messages():
     ]
 
     return messages
+#endregion
 
+
+#region Energy Trends
 async def get_traditional_energy_trends_messages():
     """Get formatted energy trends data as A2A ServerToClientMessage array"""
     energy_data = await get_traditional_energy_data()
@@ -421,7 +424,10 @@ async def get_traditional_energy_trends_messages():
     ]
 
     return messages
+#endregion
 
+
+#region Outage Timeline
 async def get_traditional_timeline_messages():
     """Get formatted timeline data as A2A ServerToClientMessage array"""
 
@@ -433,7 +439,6 @@ async def get_traditional_timeline_messages():
     timeline_event_details = []
 
     for i, outage in enumerate(outages):
-        # Calculate estimated duration (rough estimate based on restoration time - start time)
         from datetime import datetime
         start = datetime.fromisoformat(outage["start_time"].replace('Z', '+00:00'))
         end = datetime.fromisoformat(outage["estimated_restoration"].replace('Z', '+00:00'))
@@ -481,7 +486,10 @@ async def get_traditional_timeline_messages():
     ]
 
     return messages
+#endregion
 
+
+#region Energy Summary
 async def get_traditional_energy_messages():
     """Get formatted energy data as A2A ServerToClientMessage array"""
     data = await get_traditional_energy_data()
@@ -519,7 +527,10 @@ async def get_traditional_energy_messages():
     ]
 
     return messages
+#endregion
 
+
+#region Industry Summary
 async def get_traditional_industry_messages():
     """Get formatted industry data as A2A ServerToClientMessage array"""
     data = await get_traditional_industry_data()
@@ -584,3 +595,4 @@ async def get_traditional_industry_messages():
     ]
 
     return messages
+#endregion

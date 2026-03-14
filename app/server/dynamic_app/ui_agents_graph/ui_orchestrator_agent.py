@@ -9,11 +9,12 @@ from core.dynamic_app.dynamic_struct import DynamicGraphState
 from core.dynamic_app.prompts import UI_ORCHESTRATOR_INSTRUCTIONS
 
 class SuggestedQuestions(BaseModel):
-    """ Structured output to capture suggested questions based on LLM response """
+    """Structured output for follow-up question suggestions."""
     suggested_questions: list[str] = Field(description="List of suggested questions based on context")
 
+#region Suggestions
 class SuggestionsReponseLLM:
-    """ LLM that uses the structured response to provide some follow up questions """
+    """LLM wrapper that generates follow-up questions in structured format."""
 
     def __init__(self):
         self._suggestion_out = self._build_suggestion_model()
@@ -38,9 +39,12 @@ class SuggestionsReponseLLM:
             ],
             'suggestions': str(suggestions.model_dump_json())
         }
+#endregion
 
+
+#region Orchestrator
 class UIOrchestrator:
-    """ Orchestrator that receives the user query, the summary of data found and widget skills to select the suitable ones """
+    """Selects UI components based on backend results and available widget tools."""
 
     def __init__(self):
         self.gen_ai_provider = GenAIProvider()
@@ -52,7 +56,7 @@ class UIOrchestrator:
 
     async def __call__(self, state: DynamicGraphState):
         response =  await self.agent.ainvoke(state)
-        # To support structured output, seems langchain_oci has erro here
+        # Structured output is produced in this second pass due to OCI adapter limitations.
         structured_response = await self.output_response.ainvoke(f"Build the component list with the information on: {response['messages'][-1].content}")
         return {
             'messages': state['messages'] + [
@@ -72,7 +76,10 @@ class UIOrchestrator:
     
     def _build_output_llm(self):
         return self._output_client.with_structured_output(UIOrchestratorOutput)
-    
+#endregion
+
+
+#region Local Test Harness
 async def main():
     from langchain.messages import HumanMessage
     orchestrator = UIOrchestrator()
@@ -83,3 +90,4 @@ async def main():
 if __name__ == "__main__":
     import asyncio
     asyncio.run(main())
+#endregion

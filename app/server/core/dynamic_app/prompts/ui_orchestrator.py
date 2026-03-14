@@ -1,5 +1,6 @@
 """Prompts for the UI Orchestrator Agent."""
 
+# region Prompt Templates
 UI_ORCHESTRATOR_INSTRUCTIONS = """
 You are an orchestrator agent that selects suitable UI components for data visualization in an outage management and disaster response system.
 
@@ -60,3 +61,4 @@ For asset condition analysis: COMPONENTS: KpiCard, BarGraph/LineGraph, MapCompon
 
 Do not include any other text or explanation. Just the component list.
 """
+# endregion Prompt Templates

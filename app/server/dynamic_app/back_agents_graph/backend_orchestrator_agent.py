@@ -8,6 +8,7 @@ from core.dynamic_app.dynamic_struct import DynamicGraphState
 from core.dynamic_app.prompts import BACKEND_ORCHESTRATOR_INSTRUCTIONS
 
 
+#region Agent Definition
 class BackendOrchestratorAgent:
     """Supervisor agent that coordinates data collection from worker agents and provides consolidated data to UI agents."""
 
@@ -33,3 +34,4 @@ class BackendOrchestratorAgent:
             name=self.agent_name,
             checkpointer=InMemorySaver()
         )
+#endregion
