@@ -10,6 +10,7 @@ import "./status_drawer.js"
 import { chatConfig } from "../configs/chat_config.js"
 import { designTokensCSS, colors, radius } from "../theme/design-tokens.js"
 
+// #region Component
 @customElement("chat-module")
 export class ChatModule extends LitElement {
   @consume({ context: routerContext })
@@ -25,7 +26,7 @@ export class ChatModule extends LitElement {
   accessor color = "#334155"
 
   @state()
-  accessor messages: Array<{role: 'user' | 'agent', content: string, timestamp: number}> = []
+  accessor messages: Array<{role: 'user' | 'agent', content: string, timestamp: number, sources?: string[]}> = []
 
   @state()
   accessor status: Array<{timestamp: number, duration: number, message: string, type: string}> = [{timestamp: Date.now(), duration: 0, message: "Ready", type: "initial"}]
@@ -48,13 +49,12 @@ export class ChatModule extends LitElement {
   @state()
   accessor #elapsedTime: number | null = null;
 
-  // Default server URL for this module
   private defaultServerUrl = "http://localhost:10002/llm";
 
+  // #region Lifecycle
   connectedCallback() {
     super.connectedCallback();
 
-    // Listen for streaming events from the router
     if (this.router) {
       this.router.addEventListener('streaming-event', (event: any) => {
         const streamingEvent = event.detail;
@@ -67,27 +67,24 @@ export class ChatModule extends LitElement {
           this.#startTime = sentEvent.timestamp;
           this.#elapsedTime = null;
           this.#totalDuration = 0;
-          // Add user message to conversation
           this.messages = [...this.messages, {
             role: 'user',
             content: sentEvent.message || 'User query',
             timestamp: Date.now()
           }];
           this.#pendingResponse = true;
-          // Reset status with new query start
-          // this.status = [{timestamp: Date.now(), duration: 0, message: "Query sent", type: "sent"}];
           console.log("Query sent to LLM")
           this.status = []
         }
       });
     }
   }
+  // #endregion Lifecycle
 
+  // #region Streaming
   private processStreamingEvent(event: any) {
-    // Only process events from this module's server URL
     if (event.serverUrl !== this.defaultServerUrl) return;
 
-    // Process text messages for chat display
     if (event.kind === 'status-update') {
       const status = event.status;
       const isFinal = event.final;
@@ -99,32 +96,31 @@ export class ChatModule extends LitElement {
 
       console.log("process state", state);
       console.log("server message", serverState);
+      const messageSources = isFinal ? this.#parseSources(serverState[4]?.text || "[]") : [];
 
       if (isFinal && serverState[2]?.text) {
         this.tokenCount = serverState[2].text;
       }
 
-      // Extract text parts
       if (hasMessage) {
         for (const part of status.message.parts) {
           if (part.kind === 'text') {
-            // Add agent response to conversation when final
             if (isFinal && this.#pendingResponse) {
               this.messages = [...this.messages, {
                 role: 'agent',
                 content: serverMessage,
+                sources: messageSources,
                 timestamp: Date.now()
               }];
               this.#pendingResponse = false;
               this.updateComplete.then(() => this.#scrollToBottom());
             }
             
-            // The final message is a copy from the previous message, so final is no use to add.
+            // Skip final echo; only incremental updates are useful in the log.
             if(!isFinal){
               this.#addStatusWithDuration(serverMessage, event.kind);
             }
             
-            // Get suggestions (part 2) if available
             if (isFinal && serverState[3]?.text) {
               this.suggestions = serverState[3].text;
             }
@@ -135,15 +131,18 @@ export class ChatModule extends LitElement {
 
       if (state === 'failed') {
         this.#addStatusWithDuration("Task failed - An error occurred", "error");
+        this.#pendingResponse = false;
       }
 
-      // Calculate elapsed time when final response is received
       if (hasMessage && this.#startTime) {
         this.#elapsedTime = Date.now() - this.#startTime;
       }
+
+      if (isFinal || state === 'failed') {
+        this.#pendingResponse = false;
+      }
     }
     else if (event.kind === 'task') {
-      // this.#addStatusWithDuration("Task management event received", event.kind);
       console.log("Task management event received")
     }
     else if (event.kind === 'message') {
@@ -153,8 +152,10 @@ export class ChatModule extends LitElement {
       this.#addStatusWithDuration(`Event type: ${event.kind || 'unknown'}`, event.kind || 'unknown');
     }
   }
+  // #endregion Streaming
 
-  // status calculated from previous steps
+  // #region Parsing And Timing
+  // Duration is measured from the previous status timestamp.
   #addStatusWithDuration(message: string, type: string) {
     const now = Date.now();
     const lastStatus = this.status[this.status.length - 1];
@@ -167,28 +168,24 @@ export class ChatModule extends LitElement {
       type
     }];
     
-    // Update total duration from start
     if (this.#startTime) {
       this.#totalDuration = (now - this.#startTime) / 1000;
     }
   }
 
-  //Parse from a list into single suggestions
+  // Accept JSON suggestions or plain text split by newline/comma.
   #parseSuggestions(suggestionsText: string): string[] {
-    // First, try to parse as JSON and extract suggested_questions
     try {
       const parsed = JSON.parse(suggestionsText);
       if (parsed && Array.isArray(parsed.suggested_questions)) {
         return parsed.suggested_questions;
       }
     } catch (e) {
-      // Split by newlines
       let suggestions = suggestionsText
         .split(/\n/)
         .map(s => s.trim())
         .filter(s => s.length > 0);
   
-      // Split by comas
       if (suggestions.length === 1) {
         suggestions = suggestions[0]
           .split(/[,;]/)
@@ -196,11 +193,12 @@ export class ChatModule extends LitElement {
           .filter(s => s.length > 0);
       }
   
-      // try to reduce other symbols
       return suggestions.map(s => s.replace(/^(\d+[\.\)]\s*|[-•]\s*)/, '').trim());
     }
   }
+  // #endregion Parsing And Timing
 
+  // #region UI Helpers
   #scrollToBottom() {
     const chatContainer = this.shadowRoot?.querySelector('.chat-messages');
     if (chatContainer) {
@@ -208,24 +206,55 @@ export class ChatModule extends LitElement {
     }
   }
 
-  // this sends the message to the server
+  #parseSources(sourcesText: string): string[] {
+    if (!sourcesText || !sourcesText.trim()) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(sourcesText);
+      if (Array.isArray(parsed)) {
+        return [...new Set(parsed.map((s) => String(s).trim()).filter((s) => s.length > 0))];
+      }
+      return [];
+    } catch {
+      return sourcesText
+        .replace(/^\[|\]$/g, "")
+        .split(",")
+        .map(s => s.replace(/^["'\s]+|["'\s]+$/g, "").trim())
+        .filter(s => s.length > 0);
+    }
+  }
+
+  #getCurrentPendingText() {
+    const latestStatusText = this.status[this.status.length - 1]?.message;
+    if (typeof latestStatusText === "string" && latestStatusText.trim().length > 0) {
+      return latestStatusText;
+    }
+    return "Thinking...";
+  }
+  // #endregion UI Helpers
+
+  // #region Actions
   async #handleSuggestionClick(suggestion: string) {
     if (!this.router || !suggestion.trim()) return;
 
     console.log("Sending suggestion as query:", suggestion);
     try {
-      // Clear current suggestions when a new query is sent
       this.suggestions = "";
       this.router.sendTextMessage(this.defaultServerUrl, suggestion.trim());
     } catch (error) {
       console.error("Failed to send suggestion:", error);
     }
   }
+  // #endregion Actions
 
+  // #region Styles
   static styles = css`
     ${designTokensCSS}
 
     :host {
+      --conversation-max-height: min(136vh, 1760px);
       border-radius: var(--radius-xl);
       padding: var(--space-sm);
       color: var(--text-primary);
@@ -245,8 +274,8 @@ export class ChatModule extends LitElement {
 
     .chat-messages {
       flex: 1 1 auto;
-      min-height: 100px;
-      max-height: 1050px;
+      min-height: 140px;
+      max-height: var(--conversation-max-height);
       font-size: var(--font-size-base);
       line-height: 1.6;
       margin-bottom: var(--space-sm);
@@ -295,6 +324,31 @@ export class ChatModule extends LitElement {
 
     .message-content p:last-child {
       margin-bottom: 0;
+    }
+
+    .message-sources {
+      margin-top: var(--space-sm);
+      padding-top: var(--space-sm);
+      border-top: 1px solid var(--border-secondary);
+      font-size: var(--font-size-xs);
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .message-sources-title {
+      font-weight: var(--font-weight-bold);
+      margin-right: var(--space-xs);
+    }
+    
+    .source-link {
+      color: var(--oracle-primary);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      word-break: break-word;
+    }
+    
+    .source-link:hover {
+      color: var(--text-primary);
     }
 
     .pending-indicator {
@@ -444,7 +498,9 @@ export class ChatModule extends LitElement {
       }
     }
   `
+  // #endregion Styles
 
+  // #region Render
   render() {
     return [
       this.#mainDynamicRegion(),
@@ -472,6 +528,22 @@ export class ChatModule extends LitElement {
             <div class="message ${msg.role}">
               <div class="message-role">${msg.role === 'user' ? 'You' : 'Assistant'}</div>
               <div class="message-content">${unsafeHTML(marked(msg.content) as string)}</div>
+              ${msg.role === 'agent' && msg.sources && msg.sources.length > 0 ? html`
+                <div class="message-sources">
+                  <span class="message-sources-title">Sources:</span>
+                  <span>
+                    ${msg.sources.map((source, index) => html`
+                      <a
+                        class="source-link"
+                        href=${this.#getSourceUrl(source)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title=${`Open source document: ${source}`}
+                      >${source}</a>${index < msg.sources!.length - 1 ? ", " : ""}
+                    `)}
+                  </span>
+                </div>
+              ` : ''}
             </div>
           `
         )}
@@ -480,7 +552,7 @@ export class ChatModule extends LitElement {
             <div class="typing-dots">
               <span></span><span></span><span></span>
             </div>
-            <span>Thinking...</span>
+            <span>${this.#getCurrentPendingText()}</span>
           </div>
         ` : ''}
       </div>
@@ -498,10 +570,25 @@ export class ChatModule extends LitElement {
       <status-drawer .items=${this.status} accentColor="var(--oracle-primary)"></status-drawer>
     `;
   }
+  
+  #getSourceUrl(source: string): string {
+    const sourceFile = source.split(/[\\/]/).pop()?.trim() || source.trim();
+  
+    try {
+      const serverBase = new URL(this.defaultServerUrl);
+      return `${serverBase.origin}/rag_docs/${encodeURIComponent(sourceFile)}`;
+    } catch {
+      return `/rag_docs/${encodeURIComponent(sourceFile)}`;
+    }
+  }
+  // #endregion Render
 }
+// #endregion Component
 
+// #region Element Registration
 declare global {
   interface HTMLElementTagNameMap {
     "chat-module": ChatModule
   }
 }
+// #endregion Element Registration

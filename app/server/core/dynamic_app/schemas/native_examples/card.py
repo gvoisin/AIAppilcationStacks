@@ -1,3 +1,4 @@
+# region Component Definition
 COMPONENT_NAME = "Card"
 COMPONENT_DESCRIPTION = "Container component that wraps content in a visually distinct card with padding and styling."
 EXAMPLE_A2UI_MESSAGE = """
@@ -22,3 +23,5 @@ EXAMPLE_A2UI_MESSAGE = """
     }}
   }}
 ]"""
+# endregion Component Definition
+

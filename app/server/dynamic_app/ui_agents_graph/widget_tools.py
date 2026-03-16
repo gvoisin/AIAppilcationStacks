@@ -3,13 +3,11 @@ from langchain.tools import tool
 from core.dynamic_app.schemas.widget_schemas.a2ui_custom_catalog_list import CUSTOM_CATALOG
 from core.dynamic_app.schemas.native_examples.catalog import NATIVE_EXAMPLES_CATALOG
 
+
+#region Catalog Tools
 @tool()
 async def get_widget_schema(widget_name: str) -> str:
-    """Returns the widget template schema for the given widget name
-
-    Args:
-        widget_name: name of the widget to discover the template schema
-    """
+    """Return the widget template schema for a given widget name."""
     for widget in CUSTOM_CATALOG:
         if widget["widget-name"] == widget_name:
             return widget["schema"]
@@ -26,11 +24,7 @@ async def get_widget_catalog() -> str:
 
 @tool()
 async def get_native_component_example(component_name: str) -> str:
-    """Returns a complete A2UI message example for the given native component
-
-    Args:
-        component_name: name of the native component (e.g., "Text", "Button", "Image")
-    """
+    """Return a complete A2UI example for a native component."""
     for example in NATIVE_EXAMPLES_CATALOG:
         if example["component-name"] == component_name:
             return example["example"]
@@ -44,21 +38,17 @@ async def get_native_component_catalog() -> str:
         for example in NATIVE_EXAMPLES_CATALOG
     ]
     return json.dumps(catalog, indent=2)
+#endregion
 
+
+#region Dynamic Tools
 def create_custom_component_tools(inline_catalog, allowed_components=None):
-    """Creates tools for custom components from the inline catalog
-
-    Args:
-        inline_catalog: List of custom component definitions
-        allowed_components: Optional list of allowed component names. If provided,
-                           only these components will be available to the tools.
-    """
+    """Create custom-component tool wrappers from inline catalog definitions."""
 
     @tool()
     async def get_custom_component_catalog() -> str:
         """Returns the list of available custom component names"""
         if allowed_components:
-            # Filter to only allowed components
             component_names = [name for name in allowed_components if any((item.get("name") or item.get("widget-name", "")).lower() == name.lower() for item in inline_catalog)]
         else:
             component_names = [(item.get("name") or item.get("widget-name", "")) for item in inline_catalog if item.get("name") or item.get("widget-name")]
@@ -66,22 +56,15 @@ def create_custom_component_tools(inline_catalog, allowed_components=None):
 
     @tool()
     async def get_custom_component_example(component_name: str) -> str:
-        """Returns the A2UI message example for a custom component
-
-        Args:
-            component_name: name of the custom component (e.g., "BarGraph")
-        """
-        # Check if component is allowed
+        """Return the A2UI example schema for a custom component."""
         if allowed_components and component_name not in [comp.lower() for comp in allowed_components]:
             return f"Component '{component_name}' is not in the allowed list: {allowed_components}"
 
-        # Get example from inline catalog first
         for item in inline_catalog:
             item_name = item.get("name") or item.get("widget-name", "")
             if item_name.lower() == component_name.lower():
                 return item.get("schema", str(item))
 
-        # Fallback to CUSTOM_CATALOG
         for cat in CUSTOM_CATALOG:
             if cat["widget-name"].lower() == component_name.lower():
                 return cat["schema"]
@@ -89,3 +72,4 @@ def create_custom_component_tools(inline_catalog, allowed_components=None):
         return f"No example found for custom component '{component_name}'"
 
     return get_custom_component_catalog, get_custom_component_example
+#endregion

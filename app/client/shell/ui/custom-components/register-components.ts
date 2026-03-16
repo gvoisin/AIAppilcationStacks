@@ -5,17 +5,31 @@ import { MapComponent } from "./map.js";
 import { TimelineComponent } from "./timeline.js";
 import { Table } from "./table.js";
 import { KpiCard, KpiCardGroup } from "./kpi-card.js";
+import { DetailModal } from "./detail-modal.js";
 
 export function registerShellComponents() {
   componentRegistry.register("BarGraph", BarGraph, "bar-graph", {
     type: "object",
     properties: {
-      dataPath: { type: "string" },
-      labelPath: { type: "string" },
+      dataPath: { type: "string", description: "Path to numeric values array" },
+      labelPath: { type: "string", description: "Path to category labels array" },
+      detailsPath: { type: "string", description: "Path to array of detail objects for each bar (optional). Each object contains key-value pairs to display in the details panel when a bar is clicked." },
       title: { type: "string", description: "Chart title text" },
       orientation: { type: "string", enum: ["vertical", "horizontal"] },
       barWidth: { type: "number" },
       gap: { type: "number" },
+      interactive: { type: "boolean", description: "Enable hover and click interactions" },
+      colorful: { type: "boolean", description: "Use different colors for each bar" },
+      action: {
+        type: "object",
+        description: "A2UI action metadata emitted when the user clicks the bar graph action button.",
+        properties: {
+          name: { type: "string", description: "Action name sent in userAction.name (recommend: highlight_data)" }
+        },
+        required: ["name"]
+      },
+      actionLabel: { type: "string", description: "Button label for bar action trigger (default: Queue Event)" },
+      actionFallbackName: { type: "string", description: "Fallback action name when action is not provided (default: highlight_data)" },
     },
     required: ["dataPath", "labelPath"],
   });
@@ -26,11 +40,13 @@ export function registerShellComponents() {
       dataPath: { type: "string", description: "Path to single series data (for backward compatibility)" },
       labelPath: { type: "string", description: "Path to x-axis labels array" },
       seriesPath: { type: "string", description: "Path to array of series objects [{name, values, color}]" },
+      detailsPath: { type: "string", description: "Path to array of detail objects for each x-axis point (optional). Each object provides custom details shown when a point is selected." },
       title: { type: "string", description: "Chart title text" },
       showPoints: { type: "boolean", description: "Show data points on the line" },
       showArea: { type: "boolean", description: "Fill area under the line" },
       strokeWidth: { type: "number", description: "Line stroke width" },
       animated: { type: "boolean", description: "Enable line drawing animation" },
+      interactive: { type: "boolean", description: "Enable tooltips and point selection" },
     },
     required: ["labelPath"],
   });
@@ -38,18 +54,41 @@ export function registerShellComponents() {
   componentRegistry.register("MapComponent", MapComponent, "map-component", {
     type: "object",
     properties: {
-      dataPath: { type: "string" },
-      centerLat: { type: "number" },
-      centerLng: { type: "number" },
-      zoom: { type: "number" },
+      dataPath: { type: "string", description: "Path to array of map marker objects. Each marker object should contain: name (string), lat/latitude (number), lng/longitude (number), description (string, optional), status (string, optional), and any additional key-value pairs will be displayed as details in the side panel." },
+      centerLat: { type: "number", description: "Initial center latitude of the map" },
+      centerLng: { type: "number", description: "Initial center longitude of the map" },
+      zoom: { type: "number", description: "Initial zoom level of the map" },
+      showInfoPanel: { type: "boolean", description: "Show side info panel with marker list and details" },
+      action: {
+        type: "object",
+        description: "A2UI action metadata emitted when the user clicks the map panel flag button. Same protocol shape as native Button.action. Use a stable name like 'flag_circuit' for consistent userAction routing.",
+        properties: {
+          name: { type: "string", description: "Action name sent in userAction.name" }
+        },
+        required: ["name"]
+      },
+      flagActionName: { type: "string", description: "Legacy fallback action name when action is not provided" },
     },
-    required: [],
+    required: ["dataPath"],
   });
 
   componentRegistry.register("TimelineComponent", TimelineComponent, "timeline-component", {
     type: "object",
     properties: {
       dataPath: { type: "string" },
+      detailsPath: { type: "string", description: "Path to array of detail objects for each timeline event (optional), aligned by event index." },
+      expandable: { type: "boolean", description: "Enable expandable detail panels" },
+      compactPreview: { type: "boolean", description: "Keep collapsed event cards concise and move description to the expanded panel (default true)." },
+      action: {
+        type: "object",
+        description: "A2UI action metadata emitted when the user clicks the timeline action button.",
+        properties: {
+          name: { type: "string", description: "Action name sent in userAction.name (recommend: queue_timeline_event)" }
+        },
+        required: ["name"]
+      },
+      actionLabel: { type: "string", description: "Button label for timeline action trigger (default: Queue Event)" },
+      actionFallbackName: { type: "string", description: "Fallback action name when action is not provided (default: queue_timeline_event)" },
     },
     required: [],
   });
@@ -58,6 +97,7 @@ export function registerShellComponents() {
     type: "object",
     properties: {
       dataPath: { type: "string", description: "Path to array of table records" },
+      detailsPath: { type: "string", description: "Path to array of detail objects for each row (optional). Each object contains key-value pairs shown in expanded row/details panel." },
       title: { type: "string", description: "Table title" },
       columns: {
         type: "array",
@@ -74,6 +114,8 @@ export function registerShellComponents() {
       },
       showPagination: { type: "boolean", description: "Show pagination controls" },
       pageSize: { type: "number", description: "Number of records per page" },
+      expandable: { type: "boolean", description: "Enable expandable rows" },
+      showDetailPanel: { type: "boolean", description: "Show side detail panel on row selection" },
     },
     required: ["dataPath", "columns"],
   });
@@ -81,7 +123,7 @@ export function registerShellComponents() {
   componentRegistry.register("KpiCard", KpiCard, "kpi-card", {
     type: "object",
     properties: {
-      dataPath: { type: "string", description: "Path to KPI data object" },
+      dataPath: { type: "string", description: "Path to KPI data object. The data object can include: label, value, unit, change, changeLabel, icon, colorTheme, and any additional fields which will be shown as details in the pop-out panel when clicked." },
       label: { type: "string", description: "KPI label text" },
       value: { type: "number", description: "KPI value" },
       unit: { type: "string", description: "Unit suffix (e.g., %, kWh)" },
@@ -90,6 +132,12 @@ export function registerShellComponents() {
       icon: { type: "string", description: "Icon character or emoji" },
       colorTheme: { type: "string", enum: ["cyan", "coral", "teal", "yellow", "purple", "green", "pink", "orange"] },
       compact: { type: "boolean", description: "Use compact sizing" },
+      clickable: { type: "boolean", description: "Enable click to show details" },
+      details: { 
+        type: "object", 
+        description: "Additional key-value pairs to display in the details pop-out panel when the KPI card is clicked. Use this to provide contextual information like trend analysis, forecasts, breakdowns, contributing factors, or any relevant extended information about the metric.",
+        additionalProperties: true
+      },
     },
     required: [],
   });
@@ -102,5 +150,16 @@ export function registerShellComponents() {
       compact: { type: "boolean", description: "Use compact sizing for all cards" },
     },
     required: ["dataPath"],
+  });
+
+  componentRegistry.register("DetailModal", DetailModal, "detail-modal", {
+    type: "object",
+    properties: {
+      open: { type: "boolean", description: "Whether the modal is visible" },
+      title: { type: "string", description: "Modal title" },
+      position: { type: "string", enum: ["modal", "panel", "inline"], description: "Display mode" },
+      data: { type: "object", description: "Data to display in the modal" },
+    },
+    required: [],
   });
 }

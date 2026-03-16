@@ -23,21 +23,19 @@ import { repeat } from "lit/directives/repeat.js";
 import { v0_8 } from "@a2ui/lit";
 import * as UI from "@a2ui/lit/ui";
 
-// App elements.
 import "../ui/ui.js";
 import "./config_canvas.js"
 import "./stat_bar.js";
 import "./status_drawer.js";
 
-// Register custom components
 import { registerShellComponents } from "../ui/custom-components/register-components.js";
 registerShellComponents();
 
-// Configurations
 import { AppConfig } from "../configs/types.js";
 import { config as restaurantConfig } from "../configs/restaurant.js";
 import { agentConfig } from "../configs/agent_config.js";
 
+// #region Component
 @customElement("dynamic-module")
 export class DynamicModule extends LitElement {
   @provide({ context: UI.Context.themeContext })
@@ -71,6 +69,9 @@ export class DynamicModule extends LitElement {
   accessor tokenCount = ""
 
   @state()
+  accessor sources: string[] = []
+
+  @state()
   accessor #lastUserQuestion: string = "";
 
   @state()
@@ -100,6 +101,7 @@ export class DynamicModule extends LitElement {
   @state()
   accessor #totalDuration: number = 0;
 
+  // #region Internal Services
   #processor = v0_8.Data.createSignalA2uiMessageProcessor();
   #loadingInterval: number | undefined;
   #stopwatchInterval: number | undefined;
@@ -108,7 +110,9 @@ export class DynamicModule extends LitElement {
     message: SnackbarMessage;
     replaceAll: boolean;
   }> = [];
+  // #endregion Internal Services
 
+  // #region Styles
   static styles = [
     unsafeCSS(v0_8.Styles.structuralStyles),
     css`
@@ -119,6 +123,7 @@ export class DynamicModule extends LitElement {
       }
 
       :host {
+        --conversation-max-height: min(130vh, 1680px);
         display: flex;
         flex-direction: column;
         flex: 1 1 auto;
@@ -141,7 +146,7 @@ export class DynamicModule extends LitElement {
       .response {
         flex: 1 1 auto;
         min-height: 100px;
-        max-height: 1050px;
+        max-height: var(--conversation-max-height);
         font-size: var(--font-size-base);
         line-height: 1.6;
         margin-bottom: var(--space-sm);
@@ -176,21 +181,21 @@ export class DynamicModule extends LitElement {
       .surfaces-container {
         display: flex;
         flex-direction: column;
-        flex: 1 1 auto;
-        min-height: 200px;
-        overflow: auto;
-        max-height: 1050px
+        flex: 0 1 auto;
+        min-height: 0;
+        overflow: visible;
+        max-height: none;
       }
         
       .surfaces {
-        flex: 1 1 auto;
+        flex: 0 1 auto;
         width: 100%;
         max-width: 100svw;
         padding: var(--bb-grid-size-3);
         padding-bottom: 32px;
         animation: fadeIn 1s cubic-bezier(0, 0, 0.3, 1) 0.3s backwards;
         overflow-y: auto;
-        max-height: 1050px
+        max-height: var(--conversation-max-height);
       }
 
       .pending {
@@ -261,11 +266,37 @@ export class DynamicModule extends LitElement {
       transform: scale(0.98);
     }
 
+    .sources-floating {
+      flex-shrink: 0;
+      margin: 0 var(--space-md) var(--space-sm);
+      font-size: var(--font-size-xs);
+      line-height: 1.5;
+      color: var(--text-secondary);
+      background: transparent;
+      padding: 0.5rem;
+    }
+
+    .sources-floating strong {
+      color: var(--text-primary);
+      margin-right: var(--space-xs);
+    }
+
+    .source-link {
+      color: var(--agent-accent);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      word-break: break-word;
+    }
+
+    .source-link:hover {
+      color: var(--text-primary);
+    }
+
       .response-section {
-        flex: 1 1 auto;
+        flex: 0 1 auto;
         overflow: visible;
-        min-height: 100px;
-        max-height: 1050px;
+        min-height: 0;
+        max-height: none;
       }
 
       .pending {
@@ -294,7 +325,9 @@ export class DynamicModule extends LitElement {
       }
     `,
   ]
+  // #endregion Styles
 
+  // #region Lifecycle
   connectedCallback() {
     super.connectedCallback();
 
@@ -308,7 +341,6 @@ export class DynamicModule extends LitElement {
       this.config.background
     );
 
-    // Listen for streaming events from the router
     if (this.router) {
       this.router.addEventListener('streaming-event', (event: any) => {
         const streamingEvent = event.detail;
@@ -323,10 +355,11 @@ export class DynamicModule extends LitElement {
           this.#elapsedTime = null;
           this.#currentElapsedTime = 0;
           this.#totalDuration = 0;
-          // Capture the last user question
+          this.#requesting = true;
+          this.#error = null;
+          this.sources = [];
+          this.#startLoadingAnimation();
           this.#lastUserQuestion = sentEvent.message || '';
-          // Reset status with new query start
-          // this.status = [{ timestamp: Date.now(), duration: 0, message: "Query sent", type: "sent" }];
           console.log("Query sent on agent")
           this.status = []
           this.#startStopwatch();
@@ -334,7 +367,9 @@ export class DynamicModule extends LitElement {
       });
     }
   }
+  // #endregion Lifecycle
 
+  // #region Loading State
   #startLoadingAnimation() {
     if (
       Array.isArray(this.config.loadingText) &&
@@ -357,11 +392,11 @@ export class DynamicModule extends LitElement {
   }
 
   #startStopwatch() {
-    this.#stopStopwatch(); // Clear any existing timer
+    this.#stopStopwatch();
     this.#stopwatchInterval = window.setInterval(() => {
       if (this.#startTime && this.#elapsedTime === null) {
         this.#currentElapsedTime = Date.now() - this.#startTime;
-        this.requestUpdate(); // Trigger re-render
+        this.requestUpdate();
       }
     }, 100);
   }
@@ -373,52 +408,60 @@ export class DynamicModule extends LitElement {
     }
     this.#currentElapsedTime = null;
   }
+  // #endregion Loading State
 
-  // TODO: this method should go on a separate router type, missing to update
+  // #region Streaming - Parsing
+  // TODO: move this mapping logic into a typed router helper.
   private updateStatusFromStreamingEvent(event: any) {
-    // Only process events from this module's server URL
     if (event.serverUrl !== this.config.serverUrl) return;
 
-    // status updates messages
     if (event.kind === 'status-update') {
       const status = event.status;
       const isFinal = event.final;
       const state = status?.state;
       const hasMessage = status?.message?.parts?.length > 0;
 
-      // Actual part with status of server
       const serverState: Array<any> = hasMessage ? event.status.message.parts : [{ "text": "Server did not send any message parts" }];
       const serverMessage = serverState[0].text || "No text content"
 
       console.log("server message", serverState);
 
-      // Get suggestions (part 2) if available
-      if (isFinal && serverState[6]?.text) {
-        this.suggestions = serverState[6].text;
-      }
+      if (isFinal) {
+        const textParts = serverState
+          .filter((part: any) => part.kind === "text")
+          .map((part: any) => part.text);
+        const metadataTail = textParts.slice(-4);
 
-      if (isFinal && serverState[5]?.text) {
-        this.tokenCount = serverState[5].text;
+        if (metadataTail[1]) {
+          this.tokenCount = metadataTail[1];
+        }
+
+        if (metadataTail[2]) {
+          this.suggestions = metadataTail[2];
+        }
+
+        this.sources = this.#parseSources(metadataTail[3] || "[]");
       }
 
       if (state == 'failed') {
         this.#addStatusWithDuration("Task failed - An error occurred", event.kind);
       } else {
-        // The final message is a copy from the previous message, so final is no use to add.
-        if(!isFinal){
+        if (!isFinal) {
           this.#addStatusWithDuration(serverMessage, event.kind);
         }
-        // this.#addStatusWithDuration(serverMessage, event.kind);
       }
 
-      // Calculate elapsed time when final response is received
       if (hasMessage && this.#startTime) {
         this.#elapsedTime = Date.now() - this.#startTime;
         this.#stopStopwatch();
       }
+
+      if (isFinal || state === 'failed') {
+        this.#requesting = false;
+        this.#stopLoadingAnimation();
+      }
     }
     else if (event.kind === 'task') {
-      // this.#addStatusWithDuration("Task management event received", event.kind);
       console.log("Task management event received")
     }
     else if (event.kind === 'message') {
@@ -428,14 +471,12 @@ export class DynamicModule extends LitElement {
       this.#addStatusWithDuration(`Event type: ${event.kind || 'unknown'}`, event.kind);
     }
   }
-
-  //calculated with the previous duration
+  // Compute step duration from the previous status timestamp.
   #addStatusWithDuration(message: string, type: string) {
     const now = Date.now();
     const lastStatus = this.status[this.status.length - 1];
     const duration = lastStatus ? (now - lastStatus.timestamp) / 1000 : 0;
 
-    // Filter out duplicate status entries with same message and type
     if (lastStatus && lastStatus.message === message && lastStatus.type === type) {
       return;
     }
@@ -447,28 +488,24 @@ export class DynamicModule extends LitElement {
       type
     }];
 
-    // Update total duration from start
     if (this.#startTime) {
       this.#totalDuration = (now - this.#startTime) / 1000;
     }
   }
 
-  //Parse from a list into single suggestions (TODO: create interface for suggestions)
+  // Accept JSON suggestions or plain text split by newline/comma.
   #parseSuggestions(suggestionsText: string): string[] {
-    // First, try to parse as JSON and extract suggested_questions
     try {
       const parsed = JSON.parse(suggestionsText);
       if (parsed && Array.isArray(parsed.suggested_questions)) {
         return parsed.suggested_questions;
       }
-    } catch (e) {
-      // Split by newlines
+    } catch {
       let suggestions = suggestionsText
         .split(/\n/)
         .map(s => s.trim())
         .filter(s => s.length > 0);
 
-      // Split by comas
       if (suggestions.length === 1) {
         suggestions = suggestions[0]
           .split(/[,;]/)
@@ -476,19 +513,19 @@ export class DynamicModule extends LitElement {
           .filter(s => s.length > 0);
       }
 
-      // try to reduce other symbols
-      return suggestions.map(s => s.replace(/^(\d+[\.\)]\s*|[-•]\s*)/, '').trim());
+      return suggestions.map(s => s.replace(/^(\d+[\.\)]\s*|[-Ã¢â‚¬Â¢]\s*)/, '').trim());
     }
+
+    return [];
   }
 
-  // this sends the message to the server (TODO: change and put on text area if possible)
   async #handleSuggestionClick(suggestion: string) {
     if (!this.router || !suggestion.trim()) return;
 
     console.log("Sending suggestion as query:", suggestion);
     try {
-      // Clear current suggestions when a new query is sent
       this.suggestions = "";
+      this.sources = [];
       this.router.sendTextMessage(this.config.serverUrl, suggestion.trim());
     } catch (error) {
       console.error("Failed to send suggestion:", error);
@@ -496,25 +533,21 @@ export class DynamicModule extends LitElement {
   }
 
   private processMessages(event: any) {
-    // Only process events from this module's server URL
     if (event.serverUrl !== this.config.serverUrl) return;
 
-    // Check if this event contains A2UI messages
     if (event.kind === "status-update" && event.status?.message?.parts) {
       const newMessages: v0_8.Types.ServerToClientMessage[] = [];
       for (const part of event.status.message.parts) {
         if (part.kind === 'data') {
           const data = part.data;
           if (Array.isArray(data)) {
-            // Proper A2UI format: array of messages
             newMessages.push(...data);
           } else {
-            // Single message format (temporary compatibility)
             newMessages.push(data);
           }
         }
       }
-      // Replace with latest messages, not accumulate
+
       if (newMessages.length > 0) {
         this.#processingSurfaces = true;
         this.#startLoadingAnimation();
@@ -526,7 +559,9 @@ export class DynamicModule extends LitElement {
       }
     }
   }
+  // #endregion Streaming And Parsing
 
+  // #region Notifications
   snackbar(
     message: string | HTMLTemplateResult,
     type: SnackType,
@@ -568,7 +603,9 @@ export class DynamicModule extends LitElement {
 
     this.#snackbar.hide(id);
   }
+  // #endregion Notifications
 
+  // #region Render
   render() {
     return html`
       <stat-bar
@@ -587,6 +624,20 @@ export class DynamicModule extends LitElement {
       ` : ''}
       ${this.#maybeRenderError()}
       ${this.#maybeRenderData()}
+      ${this.sources.length > 0 ? html`
+        <div class="sources-floating">
+          <strong>Sources:</strong>
+          ${this.sources.map((source, index) => html`
+            <a
+              class="source-link"
+              href=${this.#getSourceUrl(source)}
+              target="_blank"
+              rel="noopener noreferrer"
+              title=${`Open source document: ${source}`}
+            >${source}</a>${index < this.sources.length - 1 ? ", " : ""}
+          `)}
+        </div>
+      ` : ''}
       ${this.suggestions ? html`
         <div class="suggestions">
           <div class="suggestions-list">
@@ -610,16 +661,56 @@ export class DynamicModule extends LitElement {
     return html`<div class="error">${this.#error}</div>`;
   }
 
+  #parseSources(sourcesText: string): string[] {
+    if (!sourcesText || !sourcesText.trim()) {
+      return [];
+    }
+
+    try {
+      const parsed = JSON.parse(sourcesText);
+      if (Array.isArray(parsed)) {
+        return [...new Set(parsed.map((s) => String(s).trim()).filter((s) => s.length > 0))];
+      }
+      return [];
+    } catch {
+      return sourcesText
+        .replace(/^\[|\]$/g, "")
+        .split(",")
+        .map((s) => s.replace(/^["'\s]+|["'\s]+$/g, "").trim())
+        .filter((s) => s.length > 0);
+    }
+  }
+
+  #getSourceUrl(source: string): string {
+    const sourceFile = source.split(/[\\/]/).pop()?.trim() || source.trim();
+
+    try {
+      const serverBase = new URL(this.config.serverUrl || window.location.origin);
+      return `${serverBase.origin}/rag_docs/${encodeURIComponent(sourceFile)}`;
+    } catch {
+      return `/rag_docs/${encodeURIComponent(sourceFile)}`;
+    }
+  }
+
+  #getCurrentLoadingText(defaultText: string) {
+    const latestStatusText = this.status[this.status.length - 1]?.message;
+    if (typeof latestStatusText === "string" && latestStatusText.trim().length > 0) {
+      return latestStatusText;
+    }
+
+    if (this.config.loadingText) {
+      if (Array.isArray(this.config.loadingText)) {
+        return this.config.loadingText[this.#loadingTextIndex];
+      }
+      return this.config.loadingText;
+    }
+
+    return defaultText;
+  }
+
   #maybeRenderData() {
     if (this.#requesting) {
-      let text = "Awaiting an answer...";
-      if (this.config.loadingText) {
-        if (Array.isArray(this.config.loadingText)) {
-          text = this.config.loadingText[this.#loadingTextIndex];
-        } else {
-          text = this.config.loadingText;
-        }
-      }
+      const text = this.#getCurrentLoadingText("Awaiting an answer...");
 
       return html`
         <div class="pending">
@@ -629,16 +720,9 @@ export class DynamicModule extends LitElement {
       `;
     }
 
-    // Show loading when processing new surfaces (TODO: fix styles since loader is not showing)
+    // Keep a loading state while a new surface tree is being applied.
     if (this.#processingSurfaces) {
-      let text = "Updating interface...";
-      if (this.config.loadingText) {
-        if (Array.isArray(this.config.loadingText)) {
-          text = this.config.loadingText[this.#loadingTextIndex];
-        } else {
-          text = this.config.loadingText;
-        }
-      }
+      const text = this.#getCurrentLoadingText("Updating interface...");
 
       return html`
         <div class="surfaces-container">
@@ -650,7 +734,6 @@ export class DynamicModule extends LitElement {
       `;
     }
 
-    // Render A2UI surfaces
     const surfaces = this.#processor.getSurfaces();
     if (surfaces.size === 0) {
       return html`<div class="response-section">
@@ -678,11 +761,11 @@ export class DynamicModule extends LitElement {
             if (evt.detail.action.context) {
               const srcContext = evt.detail.action.context;
               for (const item of srcContext) {
-                if (item.value.literalBoolean) {
+                if (item.value.literalBoolean !== undefined) {
                   context[item.key] = item.value.literalBoolean;
-                } else if (item.value.literalNumber) {
+                } else if (item.value.literalNumber !== undefined) {
                   context[item.key] = item.value.literalNumber;
-                } else if (item.value.literalString) {
+                } else if (item.value.literalString !== undefined) {
                   context[item.key] = item.value.literalString;
                 } else if (item.value.path) {
                   const path = this.#processor.resolvePath(
@@ -709,19 +792,7 @@ export class DynamicModule extends LitElement {
               },
             };
 
-            // Send action back via router
-            if (this.router) {
-              this.#requesting = true;
-              this.#startLoadingAnimation();
-              try {
-                await this.router.sendA2UIMessage(this.config.serverUrl || "http://localhost:10002", message);
-              } catch (err) {
-                this.snackbar(err as string, SnackType.ERROR);
-              } finally {
-                this.#requesting = false;
-                this.#stopLoadingAnimation();
-              }
-            }
+            await this.#sendUserActionMessage(message);
           }}
                 .surfaceId=${surfaceId}
                 .surface=${surface}
@@ -737,10 +808,32 @@ export class DynamicModule extends LitElement {
   #renderStatusWindow() {
     return html`<status-drawer .items=${this.status} accentColor="var(--agent-accent)"></status-drawer>`;
   }
-}
+  // #endregion Render
 
+  // #region Actions
+  async #sendUserActionMessage(message: v0_8.Types.A2UIClientEventMessage) {
+    if (!this.router) return;
+    try {
+      await this.router.sendA2UIMessage(
+        this.config.serverUrl || "http://localhost:10002",
+        message
+      );
+    } catch (err) {
+      this.#requesting = false;
+      this.#stopLoadingAnimation();
+      this.snackbar(err as string, SnackType.ERROR);
+    }
+  }
+  // #endregion Actions
+}
+// #endregion Component
+
+// #region Element Registration
 declare global {
   interface HTMLElementTagNameMap {
     "dynamic-module": DynamicModule
   }
 }
+// #endregion Element Registration
+
+

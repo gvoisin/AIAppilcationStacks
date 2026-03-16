@@ -3,6 +3,7 @@ import { customElement, property, state } from "lit/decorators.js"
 import { AppConfigType, ConfigData, AgentAppConfig, LLMConfig, TraditionalConfig, EnhancedAgentAppConfig, ToolAssignments } from "../configs/types.js"
 import { designTokensCSS, buttonStyles, colors, radius, spacing } from "../theme/design-tokens.js"
 
+// #region Component
 @customElement("agent-config-canvas")
 export class AgentConfigCanvas extends LitElement {
   @property({ type: Boolean }) accessor open = false;
@@ -20,6 +21,7 @@ export class AgentConfigCanvas extends LitElement {
 
   @state() accessor responseMessage = "";
 
+  // #region Field Handlers
   private handleAgentToolChange(agentName: string, tool: string, checked: boolean) {
     if (this.configType !== 'agent' || !this.configData) return;
 
@@ -51,7 +53,9 @@ export class AgentConfigCanvas extends LitElement {
     traditionalConfig[field] = value;
     this.configData = { ...traditionalConfig };
   }
+  // #endregion Field Handlers
 
+  // #region Styles
   static styles = css`
     ${designTokensCSS}
     ${buttonStyles}
@@ -87,7 +91,7 @@ export class AgentConfigCanvas extends LitElement {
       box-shadow: var(--shadow-sm);
     }
 
-    /* Sidebar Overlay */
+    /* Overlay */
     .sidebar-overlay {
       position: fixed;
       top: 0;
@@ -106,7 +110,7 @@ export class AgentConfigCanvas extends LitElement {
       visibility: visible;
     }
 
-    /* Sidebar Panel */
+    /* Panel */
     .sidebar {
       position: fixed;
       top: 0;
@@ -176,7 +180,7 @@ export class AgentConfigCanvas extends LitElement {
       justify-content: flex-end;
     }
 
-    /* Form Styles */
+    /* Forms */
     .form-group {
       margin-bottom: var(--space-lg);
     }
@@ -216,7 +220,7 @@ export class AgentConfigCanvas extends LitElement {
       min-height: 80px;
     }
 
-    /* Tab Styles */
+    /* Tabs */
     .tabs {
       display: flex;
       gap: var(--space-xs);
@@ -234,7 +238,7 @@ export class AgentConfigCanvas extends LitElement {
       border-color: var(--color-info);
     }
 
-    /* Tools Section */
+    /* Tool assignments */
     .tools-section {
       border-top: 1px solid var(--agent-bg-secondary);
       padding-top: var(--space-lg);
@@ -279,7 +283,7 @@ export class AgentConfigCanvas extends LitElement {
       min-width: 140px;
     }
 
-    /* Toggle Group */
+    /* Toggles */
     .toggle-group {
       display: flex;
       flex-direction: column;
@@ -338,9 +342,7 @@ export class AgentConfigCanvas extends LitElement {
       font-size: var(--font-size-sm);
     }
 
-    /* Action Buttons - use buttonStyles */
-
-    /* Response Message */
+    /* Save response */
     .response {
       margin-top: var(--space-md);
       padding: var(--space-sm);
@@ -360,8 +362,10 @@ export class AgentConfigCanvas extends LitElement {
       color: var(--color-error);
     }
   `
-      
-      async send(): Promise<void> {
+  // #endregion Styles
+
+  // #region Server Actions
+  async send(): Promise<void> {
         let inputData: any = {};
         
         switch (this.configType) {
@@ -414,10 +418,13 @@ export class AgentConfigCanvas extends LitElement {
       this.responseMessage = `Error: ${error instanceof Error ? error.message : 'Unknown error'}`;
     }
   }
+  // #endregion Server Actions
 
+  // #region Render
   render() {
     const availableModels = [
       "xai.grok-4",
+      "xai.grok-4-fast-reasoning",
       "xai.grok-4-fast-non-reasoning",
       "meta.llama-4-scout-17b-16e-instruct",
       "openai.gpt-4.1",
@@ -425,17 +432,13 @@ export class AgentConfigCanvas extends LitElement {
     ];
 
     const availableTools = [
-      "query_database",
-      "search_knowledge_base",
-      "get_analytics",
-      "generate_report"
+      "talk2DB",
+      "semantic_search",
     ];
 
     const availableDBTypes = [
-      "MySQL",
-      "PostgreSQL",
-      "SQLite",
-      "MongoDB"
+      "SQL_DB",
+      "Graph_DB"
     ];
 
     const availableThemes = [
@@ -487,22 +490,6 @@ export class AgentConfigCanvas extends LitElement {
                     <option value=${model} ?selected=${activeAgent.model === model}>${model}</option>
                   `)}
                 </select>
-              </div>
-
-              <div class="form-group">
-                <label>Temperature</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="2"
-                  step="0.1"
-                  .value=${activeAgent.temperature.toString()}
-                  @input=${(e: Event) => {
-                    const newConfig = { ...enhancedConfig };
-                    newConfig.agents[this.activeTab].temperature = parseFloat((e.target as HTMLInputElement).value) || 0;
-                    this.configData = newConfig;
-                  }}
-                />
               </div>
 
               <div class="form-group">
@@ -596,22 +583,6 @@ export class AgentConfigCanvas extends LitElement {
                 <option value=${model} ?selected=${llmConfig?.model === model}>${model}</option>
               `)}
             </select>
-          </div>
-
-          <div class="form-group">
-            <label>Temperature</label>
-            <input
-              type="number"
-              min="0"
-              max="2"
-              step="0.1"
-              .value=${llmConfig?.temperature?.toString() || '0.7'}
-              @input=${(e: Event) => {
-                const newConfig = { ...llmConfig };
-                newConfig.temperature = parseFloat((e.target as HTMLInputElement).value) || 0;
-                this.configData = newConfig;
-              }}
-            />
           </div>
 
           <div class="form-group">
@@ -735,10 +706,14 @@ export class AgentConfigCanvas extends LitElement {
       </div>
     `;
   }
+  // #endregion Render
 }
+// #endregion Component
 
+// #region Element Registration
 declare global {
   interface HTMLElementTagNameMap {
     "agent-config-canvas": AgentConfigCanvas
   }
 }
+// #endregion Element Registration

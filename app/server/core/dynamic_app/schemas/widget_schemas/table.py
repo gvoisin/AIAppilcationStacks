@@ -1,5 +1,9 @@
+# region Component Definition
 WIDGET_NAME = "Table"
-WIDGET_DESCRIPTION = "component designed to display tabular data with configurable columns. Requires array of record objects and column definitions specifying headers, fields, and types."
+WIDGET_DESCRIPTION = """Component designed to display tabular data with configurable columns.
+REQUIRED: dataPath (path to array of record objects), columns (header/field/type definitions).
+OPTIONAL: detailsPath (path to array of detail objects aligned by row index; each detail object is shown in expanded row and side detail panel), title, expandable, showDetailPanel.
+Use detailsPath to provide rich row-level context without duplicating visible table columns."""
 WIDGET_SCHEMA = """
 [
   {{ "beginRendering": {{ "surfaceId": "table-view","root": "main-container" }} }},
@@ -10,6 +14,7 @@ WIDGET_SCHEMA = """
         {{ "id": "title","component": {{ "Text": {{ "usageHint": "h2", "text": {{ "literalString": "Data Table" }} }} }} }},
         {{ "id": "data-table", "component": {{ "Table": {{
           "dataPath": "/tableData",
+          "detailsPath": "/tableDetails",
           "title": "Data Table",
           "columns": [
             {{ "header": "ID", "field": "id", "type": "string" }},
@@ -53,8 +58,33 @@ WIDGET_SCHEMA = """
               ]
             }}
           ]
+        }},
+        {{
+          "key": "tableDetails",
+          "valueMap": [
+            {{
+              "key": "0",
+              "valueMap": [
+                {{ "key": "rootCause", "valueString": "Transformer overload" }},
+                {{ "key": "affectedCustomers", "valueNumber": 1280 }},
+                {{ "key": "assignedCrew", "valueString": "Team Alpha" }},
+                {{ "key": "nextUpdate", "valueString": "In 30 minutes" }}
+              ]
+            }},
+            {{
+              "key": "1",
+              "valueMap": [
+                {{ "key": "rootCause", "valueString": "Scheduled maintenance window" }},
+                {{ "key": "affectedCustomers", "valueNumber": 420 }},
+                {{ "key": "assignedCrew", "valueString": "Team Delta" }},
+                {{ "key": "nextUpdate", "valueString": "After completion checkpoint" }}
+              ]
+            }}
+          ]
         }}
       ]
     }}
   }}
 ]"""
+# endregion Component Definition
+

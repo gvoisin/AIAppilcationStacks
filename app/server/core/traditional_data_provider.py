@@ -1,5 +1,6 @@
 """Data provider for traditional application - contains comprehensive data independently"""
 
+# region Static Data
 # Outage data for traditional application
 OUTAGE_DATA = {
     "outages": [
@@ -8,28 +9,48 @@ OUTAGE_DATA = {
             "start_time": "2024-02-12 14:30",
             "estimated_restoration": "2024-02-12 18:00",
             "affected_customers": 2500,
-            "cause": "Transformer failure due to storm damage"
+            "cause": "Transformer failure due to storm damage",
+            "crew_assigned": "Team Alpha - 5 technicians",
+            "priority": "Critical - Hospital in area",
+            "notes": "Emergency backup generators activated at local hospital. Replacement transformer en route.",
+            "status": "Active",
+            "severity": "High"
         },
         {
             "location": "Portland Suburb, OR",
             "start_time": "2024-02-12 13:15",
             "estimated_restoration": "2024-02-12 16:30",
             "affected_customers": 1800,
-            "cause": "Tree branch on power lines"
+            "cause": "Tree branch on power lines",
+            "crew_assigned": "Team Beta - 3 technicians",
+            "priority": "Standard residential area",
+            "notes": "Diagnostic team analyzing sensor data. May require equipment replacement.",
+            "status": "Investigating",
+            "severity": "Medium"
         },
         {
             "location": "San Francisco Bay Area, CA",
             "start_time": "2024-02-12 12:00",
             "estimated_restoration": "2024-02-12 15:00",
             "affected_customers": 3200,
-            "cause": "Equipment malfunction"
+            "cause": "Equipment malfunction",
+            "crew_assigned": "Team Charlie - 4 technicians",
+            "priority": "Elevated - Commercial district",
+            "notes": "Multiple substations affected. Rolling blackouts implemented to manage load.",
+            "status": "Active",
+            "severity": "High"
         },
         {
             "location": "Los Angeles Downtown, CA",
             "start_time": "2024-02-12 11:45",
             "estimated_restoration": "2024-02-12 14:30",
             "affected_customers": 4100,
-            "cause": "Cable damage during construction"
+            "cause": "Cable damage during construction",
+            "crew_assigned": "Team Delta - 6 technicians",
+            "priority": "High - Financial district impact",
+            "notes": "Construction crew secured site. Cable splicing equipment deployed.",
+            "status": "Active",
+            "severity": "Medium"
         }
     ],
     "total_outages": 4,
@@ -60,6 +81,33 @@ ENERGY_DATA = {
     "efficiency_metrics": {
         "grid_efficiency": 94.2,
         "renewable_percentage": 49.5
+    },
+    "kpi_details": {
+        "total_production": {
+            "trend": "rising steadily over Q4",
+            "forecast": "950000 MWh expected next month",
+            "breakdown": "Solar: 45%, Wind: 30%, Hydro: 25%"
+        },
+        "renewable": {
+            "trend": "above target of 55% renewable mix",
+            "forecast": "450000 MWh expected next month",
+            "breakdown": "Solar: 60%, Wind: 25%, Hydro: 15%"
+        },
+        "fossil": {
+            "trend": "gradually decreasing as renewables increase",
+            "forecast": "350000 MWh expected next month",
+            "breakdown": "Natural Gas: 65%, Coal: 35%"
+        },
+        "nuclear": {
+            "trend": "stable baseline contribution",
+            "forecast": "52000 MWh expected next month",
+            "breakdown": "Single reactor facility at full capacity"
+        },
+        "grid_efficiency": {
+            "trend": "above target of 92%",
+            "forecast": "95.1% expected next month",
+            "factors": "Smart grid upgrades, load balancing improvements"
+        }
     }
 }
 
@@ -123,10 +171,12 @@ INDUSTRY_DATA = {
         "top_performing_industry": "Technology"
     }
 }
+# endregion Static Data
 
+# region Accessors
 async def get_traditional_outage_data():
     """Get traditional outage data - independent from other applications"""
-    # Return a copy to prevent external modifications
+    # Return a copy to prevent external modifications.
     import json
     return json.loads(json.dumps(OUTAGE_DATA))
 
@@ -139,3 +189,4 @@ async def get_traditional_industry_data():
     """Get traditional industry data - independent from other applications"""
     import json
     return json.loads(json.dumps(INDUSTRY_DATA))
+# endregion Accessors

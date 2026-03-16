@@ -1,10 +1,11 @@
-import logging
 import os
+import re
+import json
 from collections.abc import AsyncIterable
 from typing import Any
 from langchain.agents import create_agent
 from langchain_oci import ChatOCIGenAI
-from langchain.messages import HumanMessage, AIMessage, AnyMessage, ToolMessage
+from langchain.messages import HumanMessage, AIMessage, ToolMessage
 from langgraph.graph.state import CompiledStateGraph
 from langchain_core.runnables import RunnableConfig
 from langgraph.checkpoint.memory import InMemorySaver
@@ -16,13 +17,38 @@ from core.common_struct import SUGGESTION_QUERY
 from chat_app.rag_tool import semantic_search
 from chat_app.nl2sql_agent import call_SQL_DB
 
-logger = logging.getLogger(__name__)
+SOURCE_PATTERN = re.compile(r"\(Source:\s*([^)]+)\)")
 
+
+#region Utilities
+def extract_RAG_sources(semantic_result: str) -> list[str]:
+    """Extract unique document names from semantic search tool output."""
+    if not semantic_result:
+        return []
+
+    documents: list[str] = []
+    seen: set[str] = set()
+
+    for source in SOURCE_PATTERN.findall(semantic_result):
+        filename = source.strip().replace("\\", "/").split("/")[-1]
+        match = re.match(r"(.+?\.[A-Za-z0-9]+)(?:_start_\d+)?$", filename)
+        doc_name = match.group(1) if match else filename
+
+        if doc_name and doc_name not in seen:
+            seen.add(doc_name)
+            documents.append(doc_name)
+
+    return documents
+#endregion
+
+
+#region Main Agent
 class OCIOutageEnergyLLM:
-    """ Agent using OCI libraries to provide outage and energy information """
+    """LLM agent that handles outage and energy requests."""
 
     SUPPORTED_CONTENT_TYPES = ["text", "text/plain", "text/event-stream"]
 
+    #region Setup
     def __init__(self):
         self._agent = self._build_agent()
         self._user_id = "remote_llm"
@@ -46,58 +72,70 @@ class OCIOutageEnergyLLM:
             name="outage_energy_llm",
             checkpointer= InMemorySaver()
         )
+    #endregion
     
+    #region Streaming
     async def oci_stream(self, query, session_id) -> AsyncIterable[dict[str, Any]]:
-        """ Function to call agent and stream responses """
+        """Call the agent and stream intermediate and final responses."""
         
         current_message = {"messages":[HumanMessage(query)]}
         config:RunnableConfig = {"run_id":str(session_id), "configurable": {"thread_id": str(session_id)}}
         final_response_content = None
         final_model_state = None
         model_token_count = 0
+        source_documents: list[str] = []
+        processed_messages = 0
 
         async for event in self._agent.astream(
             input=current_message,
             stream_mode="values",
             config=config
         ):
-            latest_update:AnyMessage = event['messages'][-1]
-            final_response_content = latest_update.content
+            messages = event.get("messages", [])
+            new_messages = messages[processed_messages:]
+            processed_messages = len(messages)
 
-            if hasattr(latest_update, 'tool_calls') and latest_update.tool_calls:
-                if len(latest_update.tool_calls) == 1:
-                    tool_name = str(latest_update.tool_calls[0].get('name'))
-                    tool_args = str(latest_update.tool_calls[0].get('args'))
-                    latest_update = f"Model calling tool: {tool_name} with args {tool_args}"    
+            for latest_update in new_messages:
+                if isinstance(latest_update, AIMessage):
+                    final_response_content = latest_update.content
+
+                if hasattr(latest_update, 'tool_calls') and latest_update.tool_calls:
+                    if len(latest_update.tool_calls) == 1:
+                        tool_name = str(latest_update.tool_calls[0].get('name',''))
+                        tool_args = str(latest_update.tool_calls[0].get('args',''))
+                        update_text = f"Model calling tool: {tool_name} with args {tool_args}"    
+                    else:
+                        tool_names = [str(tc.get('name', '')) for tc in latest_update.tool_calls]
+                        update_text = f"Model called tools: {', '.join(tool_names)}"  
+                elif isinstance(latest_update,ToolMessage):
+                    tool_name = str(latest_update.name)
+                    status_content = str(latest_update.content)
+                    update_text = f"Tool {tool_name} responded with:\n{status_content[:100]}...\n\nInformation passed to agent to build response"
+                    if tool_name == "semantic_search":
+                        for document_name in extract_RAG_sources(status_content):
+                            if document_name not in source_documents:
+                                source_documents.append(document_name)
+                elif isinstance(latest_update, AIMessage):
+                    status_content = str(latest_update.content)
+                    model_id = str(latest_update.response_metadata.get("model_id", ""))
+                    total_tokens_on_call = int(latest_update.response_metadata.get("total_tokens","0"))
+                    model_token_count = model_token_count + total_tokens_on_call
+                    agent_name = str(latest_update.name)
+                    model_data = f"""
+                        model_id: {model_id},
+                        agent_name: {agent_name},
+                        total_tokens_on_call: {str(model_token_count)}
+                    """
+                    update_text = f"Model responded:\n{status_content[:100]}...\n\nModel metadata:\n{model_data}"
+                    final_model_state = update_text
                 else:
-                    tool_names = [str(tc.get('name', '')) for tc in latest_update.tool_calls]
-                    latest_update = f"Model called tools: {', '.join(tool_names)}"  
-            elif isinstance(latest_update,ToolMessage):
-                tool_name = str(latest_update.name)
-                status_content = str(latest_update.content)
-                latest_update = f"Tool {tool_name} responded with:\n{status_content[:100]}...\n\nInformation passed to agent to build response"
-            elif isinstance(latest_update, AIMessage):
-                status_content = str(latest_update.content)
-                model_id = str(latest_update.response_metadata.get("model_id"))
-                total_tokens_on_call = int(latest_update.response_metadata.get("total_tokens"))
-                model_token_count = model_token_count + total_tokens_on_call
-                agent_name = str(latest_update.name)
-                model_data = f"""
-                    model_id: {model_id},
-                    agent_name: {agent_name},
-                    total_tokens_on_call: {str(model_token_count)}
-                """
-                latest_update = f"Model responded:\n{status_content[:100]}...\n\nModel metadata:\n{model_data}"
-                final_model_state = latest_update
-            else:
-                status_content = str(latest_update.content)
-                latest_update = f"Model processing:\n{status_content[:100]}..."
+                    status_content = str(latest_update.content)
+                    update_text = f"Model processing:\n{status_content[:100]}..."
 
-            # Yield intermediate updates on every attempt
-            yield {
-                "is_task_complete": False,
-                "updates": latest_update
-            }
+                yield {
+                    "is_task_complete": False,
+                    "updates": update_text
+                }
 
         suggestions = await self._suggestion_out.ainvoke(self._out_query+f"\n\nContext for question generation:\n{final_response_content}")
         if not suggestions: suggestions = SuggestedQuestions(suggested_questions=["Tell me more details about first data", "Make a summary of data given"])
@@ -107,5 +145,8 @@ class OCIOutageEnergyLLM:
             "content": f"{final_response_content}",
             "final_state": f"{str(final_response_content)[:100]}\n{final_model_state}",
             "token_count": str(model_token_count),
-            "suggestions": suggestions.model_dump_json()
+            "suggestions": suggestions.model_dump_json(),
+            "sources": json.dumps(source_documents)
         }
+    #endregion
+#endregion

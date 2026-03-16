@@ -18,6 +18,8 @@ from core.dynamic_app.schema_utils import (
 
 logger = logging.getLogger(__name__)
 
+
+#region Assembly Agent
 class UIAssemblyAgent:
     """Agent in charge of generating the ordered UI schemas from ui orchestrator."""
 
@@ -43,6 +45,7 @@ class UIAssemblyAgent:
             name=self.agent_name
         )
 
+    #region Runtime Setup
     def _setup_schema_and_tools(self, orchestrator_data: str, data_context: str) -> List[str]:
         """Setup schema, tools, and prompt for the current request."""
         allowed_components = extract_allowed_components(orchestrator_data)
@@ -64,7 +67,9 @@ class UIAssemblyAgent:
 
         self.agent = self._build_agent()
         return allowed_components
+    #endregion
 
+    #region Validation
     def _validate_ui_response(self, response_content: str) -> Tuple[bool, str, str]:
         """Validate UI response against A2UI schema. Returns (is_valid, error_message, final_content)."""
         try:
@@ -89,7 +94,9 @@ class UIAssemblyAgent:
 
         except (ValueError, json.JSONDecodeError, jsonschema.exceptions.ValidationError) as e:
             return False, f"Validation failed: {e}", ""
+    #endregion
 
+    #region Prompt Building
     def _generate_query_text(self, orchestrator_data: str, data_context: str, is_retry: bool = False, error_message: str = "") -> str:
         """Generate the query text for the agent, including retry instructions if needed."""
         allowed_str = ", ".join(self.allowed_components) if self.allowed_components else "any available"
@@ -118,7 +125,9 @@ Only after calling all required tools, generate the final A2UI JSON response."""
             )
 
         return base_instructions
+    #endregion
 
+    #region Execution
     async def _generate_with_retry(self, orchestrator_data: str, data_context: str, max_retries: int = 1) -> Dict[str, Any]:
         """Generate UI with retry logic on validation failure."""
         for attempt in range(max_retries + 1):
@@ -145,7 +154,9 @@ Only after calling all required tools, generate the final A2UI JSON response."""
                 AIMessage(content="I'm sorry, I'm having trouble generating the interface for that request right now. Please try again in a moment.")
             ]
         }
+    #endregion
 
+    #region Public API
     async def __call__(self, state: DynamicGraphState) -> Dict[str, Any]:
         """Call the UI assembly agent to generate and validate UI from orchestrator data."""
         orchestrator_data = state['messages'][-1].content
@@ -164,28 +175,34 @@ Only after calling all required tools, generate the final A2UI JSON response."""
         result = await self._generate_with_retry(orchestrator_data, data_context)
         result['messages'] = state['messages'] + result['messages']
         return result
-    
+    #endregion
+#endregion
+
+
+#region Local Test Harness
 async def main():
     from langchain.messages import HumanMessage, AIMessage
-    # Define inline_catalog with BarGraph schema from register-components.ts
     inline_catalog = [
         {
             "name": "BarGraph",
             "schema": {
                 "type": "object",
                 "properties": {
-                    "dataPath": {"type": "string"},
-                    "labelPath": {"type": "string"},
+                    "dataPath": {"type": "string", "description": "Path to numeric values array"},
+                    "labelPath": {"type": "string", "description": "Path to category labels array"},
+                    "detailsPath": {"type": "string", "description": "Path to array of detail objects for each bar. Each object contains custom key-value pairs to display in the details panel."},
+                    "title": {"type": "string", "description": "Chart title text"},
                     "orientation": {"type": "string", "enum": ["vertical", "horizontal"]},
                     "barWidth": {"type": "number"},
                     "gap": {"type": "number"},
+                    "interactive": {"type": "boolean", "description": "Enable hover and click interactions"},
+                    "colorful": {"type": "boolean", "description": "Use different colors for each bar"},
                 },
                 "required": ["dataPath", "labelPath"],
             }
         }
     ]
     orchestrator = UIAssemblyAgent(inline_catalog=inline_catalog)
-    # Create proper test state with orchestrator output and data context
     state: DynamicGraphState = {
         'messages': [
             AIMessage(content='Sample data context for visualization'),
@@ -198,3 +215,4 @@ async def main():
 if __name__ == "__main__":
     import asyncio
     asyncio.run(main())
+#endregion

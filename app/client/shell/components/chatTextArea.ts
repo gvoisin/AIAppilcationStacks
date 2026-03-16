@@ -4,6 +4,7 @@ import { consume } from "@lit/context"
 import { routerContext, A2UIRouter } from "../services/a2ui-router.js"
 import { designTokensCSS, buttonStyles } from "../theme/design-tokens.js"
 
+// #region Component
 @customElement("chat-input")
 export class ChatInput extends LitElement {
   @consume({ context: routerContext })
@@ -12,10 +13,10 @@ export class ChatInput extends LitElement {
   @state()
   accessor #inputValue = ""
 
-  // Default server URL for sending messages
   private llmDefaultServer = "http://localhost:10002/llm";
   private agentDefaultServer = "http://localhost:10002/agent";
 
+  // #region Styles
   static styles = css`
     ${designTokensCSS}
     ${buttonStyles}
@@ -70,7 +71,7 @@ export class ChatInput extends LitElement {
       flex: 2;
     }
 
-    /* Responsive: stack on small screens */
+    /* Stack buttons on narrow screens */
     @media (max-width: 600px) {
       .send-buttons {
         flex-direction: column;
@@ -81,7 +82,9 @@ export class ChatInput extends LitElement {
       }
     }
   `
+  // #endregion Styles
 
+  // #region Actions
   private async handleSubmit() {
     if (this.#inputValue.trim() && this.router) {
       console.log("Sending message:", this.#inputValue)
@@ -124,7 +127,9 @@ export class ChatInput extends LitElement {
       this.handleSubmit()
     }
   }
+  // #endregion Actions
 
+  // #region Render
   render() {
     return html`
       <div class="input-container">
@@ -149,10 +154,14 @@ export class ChatInput extends LitElement {
       </div>
     `
   }
+  // #endregion Render
 }
+// #endregion Component
 
+// #region Element Registration
 declare global {
   interface HTMLElementTagNameMap {
     "chat-input": ChatInput
   }
 }
+// #endregion Element Registration

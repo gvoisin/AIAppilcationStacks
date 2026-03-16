@@ -1,13 +1,19 @@
 """
 Utilities for A2UI schema loading and manipulation.
 """
+
+# region Imports
 import json
 import logging
 import os
 from typing import List, Dict, Any
+# endregion Imports
 
+# region Logger
 logger = logging.getLogger(__name__)
+# endregion Logger
 
+# region Schema Loading
 def load_a2ui_schema() -> str:
     """Load the A2UI schema from file."""
     schema_path = os.path.join(os.path.dirname(__file__), 'schemas', 'a2ui_native_schema.json')
@@ -17,7 +23,9 @@ def load_a2ui_schema() -> str:
     except (FileNotFoundError, json.JSONDecodeError) as e:
         logger.warning(f"Could not load a2ui schema: {e}")
         return "{}"
+# endregion Schema Loading
 
+# region Schema Mutation
 def inject_custom_schemas_into_schema(schema_str: str, custom_schemas: List[Dict], allowed_components: List[str] = None) -> str:
     """Inject custom component schemas into the A2UI schema, optionally filtering to allowed components."""
     if not custom_schemas:
@@ -37,7 +45,9 @@ def inject_custom_schemas_into_schema(schema_str: str, custom_schemas: List[Dict
     except (json.JSONDecodeError, KeyError) as e:
         logger.warning(f"Failed to inject custom schemas: {e}")
         return schema_str
+# endregion Schema Mutation
 
+# region Validators
 def create_array_schema_validator(single_message_schema_str: str) -> Dict[str, Any]:
     """Create an array schema validator from a single message schema."""
     try:
@@ -46,7 +56,9 @@ def create_array_schema_validator(single_message_schema_str: str) -> Dict[str, A
     except json.JSONDecodeError as e:
         logger.error(f"Failed to create array schema validator: {e}")
         return None
-    
+# endregion Validators
+
+# region Parsing
 def extract_allowed_components(data: str) -> List[str]:
     """Extract the list of allowed component names from orchestrator output."""
     try:
@@ -58,3 +70,4 @@ def extract_allowed_components(data: str) -> List[str]:
         pass
     # Return None to indicate no filtering should be applied
     return None
+# endregion Parsing

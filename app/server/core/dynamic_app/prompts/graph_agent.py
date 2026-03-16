@@ -1,5 +1,8 @@
+# region Imports
 import textwrap
+# endregion Imports
 
+# region Prompt Templates
 GRAPH_SCHEMA_DESCRIPTION = textwrap.dedent(
     """
     You are an expert Oracle SQL generator for property graphs using PGQL. The user asks questions about
@@ -115,3 +118,4 @@ GRAPH_FEW_SHOT_EXAMPLES = [
         ),
     },
 ]
+# endregion Prompt Templates

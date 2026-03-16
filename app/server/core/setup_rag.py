@@ -3,6 +3,7 @@
 Setup script to load and index all RAG documents into the database.
 """
 
+# region Imports
 import sys
 import os
 
@@ -10,7 +11,9 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from core.gen_ai_provider import GenAIEmbedProvider
 from database.connections import RAGDBConnection
+# endregion Imports
 
+# region Entrypoint
 def main():
     """Load all RAG documents and insert into database."""
     print("Initializing RAG document indexing...")
@@ -29,3 +32,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+# endregion Entrypoint

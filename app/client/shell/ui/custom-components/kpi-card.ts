@@ -1,7 +1,9 @@
 import { html, css } from "lit";
-import { property, customElement } from "lit/decorators.js";
+import { property, customElement, state } from "lit/decorators.js";
 import { Root } from "@a2ui/lit/ui";
 import { colors } from "../../theme/design-tokens.js";
+import { KpiClickEvent } from "./detail-modal.js";
+import "./detail-modal.js";
 
 interface KpiData {
   label: string;
@@ -11,6 +13,7 @@ interface KpiData {
   changeLabel?: string;
   icon?: string;
   color?: string;
+  details?: Record<string, any>;
 }
 
 const KPI_THEMES: Record<string, { primary: string; bg: string }> = {
@@ -24,7 +27,7 @@ const KPI_THEMES: Record<string, { primary: string; bg: string }> = {
   orange: { primary: colors.semantic.warning, bg: `rgba(245, 158, 11, 0.1)` },
 };
 
-// single KPI card to include on the set
+// Individual KPI card component.
 @customElement('kpi-card')
 export class KpiCard extends Root {
   @property({ attribute: false }) accessor dataPath: any = "";
@@ -36,6 +39,11 @@ export class KpiCard extends Root {
   @property({ attribute: false }) accessor icon: string = "";
   @property({ attribute: false }) accessor colorTheme: string = "cyan";
   @property({ attribute: false }) accessor compact: boolean = false;
+  @property({ attribute: false }) accessor clickable: boolean = true;
+  @property({ attribute: false }) accessor details: Record<string, any> = {};
+
+  @state() accessor showDetails = false;
+  @state() accessor currentKpiData: KpiData | null = null;
 
   static styles = [
     ...Root.styles,
@@ -64,6 +72,14 @@ export class KpiCard extends Root {
       .kpi-card:hover {
         transform: translateY(-2px);
         box-shadow: var(--shadow-glow);
+      }
+
+      .kpi-card.clickable {
+        cursor: pointer;
+      }
+
+      .kpi-card.clickable:active {
+        transform: translateY(0);
       }
 
       .kpi-card.compact {
@@ -176,13 +192,25 @@ export class KpiCard extends Root {
         font-style: italic;
         font-size: 12px;
       }
+
+      .click-hint {
+        font-size: 10px;
+        color: var(--text-muted);
+        text-align: center;
+        margin-top: var(--space-sm);
+        opacity: 0;
+        transition: opacity var(--transition-normal);
+      }
+
+      .kpi-card.clickable:hover .click-hint {
+        opacity: 1;
+      }
     `,
   ];
 
   render() {
     let kpiData: KpiData | null = null;
 
-    // If dataPath is provided, fetch data from processor
     if (this.dataPath && typeof this.dataPath === 'string' && this.processor) {
       const rawData = this.processor.getData(this.component, this.dataPath, this.surfaceId ?? 'default') as any;
       
@@ -191,7 +219,6 @@ export class KpiCard extends Root {
       }
     }
     
-    // Otherwise, use direct properties
     if (!kpiData && (this.label || this.value)) {
       kpiData = {
         label: this.label,
@@ -200,7 +227,8 @@ export class KpiCard extends Root {
         change: this.change ?? undefined,
         changeLabel: this.changeLabel,
         icon: this.icon,
-        color: this.colorTheme
+        color: this.colorTheme,
+        details: this.details
       };
     }
 
@@ -208,11 +236,12 @@ export class KpiCard extends Root {
       return html`<div class="empty-state">No KPI data</div>`;
     }
 
+    this.currentKpiData = kpiData;
     const themeColors = KPI_THEMES[kpiData.color || this.colorTheme] || KPI_THEMES.cyan;
     const changeClass = this.getChangeClass(kpiData.change);
 
     return html`
-      <div class="kpi-card ${this.compact ? 'compact' : ''}">
+      <div class="kpi-card ${this.compact ? 'compact' : ''} ${this.clickable ? 'clickable' : ''}" @click=${this.handleClick}>
         <div class="kpi-header">
           <span class="kpi-label">${kpiData.label}</span>
           ${kpiData.icon ? html`
@@ -234,12 +263,60 @@ export class KpiCard extends Root {
             ${kpiData.changeLabel ? html`<span class="kpi-change-label">${kpiData.changeLabel}</span>` : ''}
           </div>
         ` : ''}
+        ${this.clickable ? html`<div class="click-hint">Click for details</div>` : ''}
       </div>
+      <detail-modal
+        .open=${this.showDetails}
+        .title=${kpiData.label + ' Details'}
+        .position=${'modal'}
+        .data=${this.getDetailData(kpiData)}
+        @close=${this.closeDetails}
+      ></detail-modal>
     `;
   }
 
+  private handleClick() {
+    if (this.clickable && this.currentKpiData) {
+      this.showDetails = true;
+      this.dispatchEvent(new KpiClickEvent(this.currentKpiData));
+    }
+  }
+
+  private closeDetails() {
+    this.showDetails = false;
+  }
+
+  private getDetailData(kpiData: KpiData): Record<string, any> {
+    const data: Record<string, any> = {
+      'Metric': kpiData.label,
+      'Current Value': `${this.formatValue(kpiData.value)}${kpiData.unit ? ' ' + kpiData.unit : ''}`,
+    };
+
+    if (kpiData.change !== undefined) {
+      data['Change'] = `${kpiData.change > 0 ? '+' : ''}${kpiData.change}%`;
+      if (kpiData.changeLabel) {
+        data['Period'] = kpiData.changeLabel;
+      }
+    }
+
+    if (kpiData.details) {
+      Object.assign(data, kpiData.details);
+    }
+
+    return data;
+  }
+
   private parseKpiData(rawData: any): KpiData | null {
+    // Keep known KPI keys out of the derived `details` payload.
+    const standardFields = new Set(['label', 'value', 'unit', 'change', 'changeLabel', 'icon', 'color', 'colorTheme', 'details']);
+
     if (rawData instanceof Map) {
+      const details: Record<string, any> = {};
+      rawData.forEach((value, key) => {
+        if (!standardFields.has(key)) {
+          details[key] = value;
+        }
+      });
       return {
         label: rawData.get('label') || '',
         value: rawData.get('value') || 0,
@@ -247,21 +324,39 @@ export class KpiCard extends Root {
         change: rawData.get('change'),
         changeLabel: rawData.get('changeLabel'),
         icon: rawData.get('icon'),
-        color: rawData.get('color')
+        color: rawData.get('color') || rawData.get('colorTheme'),
+        details: Object.keys(details).length > 0 ? details : rawData.get('details')
       };
     } else if (rawData.valueMap) {
       const result: KpiData = { label: '', value: 0 };
+      const details: Record<string, any> = {};
       for (const kv of rawData.valueMap) {
         if (kv.key === 'label') result.label = kv.valueString || '';
-        if (kv.key === 'value') result.value = kv.valueNumber ?? kv.valueString ?? 0;
-        if (kv.key === 'unit') result.unit = kv.valueString;
-        if (kv.key === 'change') result.change = kv.valueNumber;
-        if (kv.key === 'changeLabel') result.changeLabel = kv.valueString;
-        if (kv.key === 'icon') result.icon = kv.valueString;
-        if (kv.key === 'color') result.color = kv.valueString;
+        else if (kv.key === 'value') result.value = kv.valueNumber ?? kv.valueString ?? 0;
+        else if (kv.key === 'unit') result.unit = kv.valueString;
+        else if (kv.key === 'change') result.change = kv.valueNumber;
+        else if (kv.key === 'changeLabel') result.changeLabel = kv.valueString;
+        else if (kv.key === 'icon') result.icon = kv.valueString;
+        else if (kv.key === 'color' || kv.key === 'colorTheme') result.color = kv.valueString;
+        else if (kv.key === 'details' && kv.valueMap) {
+          for (const detailKv of kv.valueMap) {
+            details[detailKv.key] = detailKv.valueString ?? detailKv.valueNumber ?? detailKv.valueBool;
+          }
+        } else if (!standardFields.has(kv.key)) {
+          details[kv.key] = kv.valueString ?? kv.valueNumber ?? kv.valueBool;
+        }
+      }
+      if (Object.keys(details).length > 0) {
+        result.details = details;
       }
       return result;
     } else if (typeof rawData === 'object') {
+      const details: Record<string, any> = {};
+      for (const key of Object.keys(rawData)) {
+        if (!standardFields.has(key)) {
+          details[key] = rawData[key];
+        }
+      }
       return {
         label: rawData.label || '',
         value: rawData.value || 0,
@@ -269,7 +364,8 @@ export class KpiCard extends Root {
         change: rawData.change,
         changeLabel: rawData.changeLabel,
         icon: rawData.icon,
-        color: rawData.color
+        color: rawData.color || rawData.colorTheme,
+        details: Object.keys(details).length > 0 ? details : rawData.details
       };
     }
     return null;
@@ -342,7 +438,7 @@ export class KpiCard extends Root {
   }
 }
 
-// A group of cards to render together
+// Renders a collection of KPI cards from a bound data set.
 @customElement('kpi-card-group')
 export class KpiCardGroup extends Root {
   @property({ attribute: false }) accessor dataPath: any = "";
@@ -395,7 +491,6 @@ export class KpiCardGroup extends Root {
   render() {
     let kpiItems: KpiData[] = [];
 
-    // Resolve dataPath
     if (this.dataPath && typeof this.dataPath === 'string' && this.processor) {
       let rawData = this.processor.getData(this.component, this.dataPath, this.surfaceId ?? 'default') as any;
 
@@ -433,6 +528,7 @@ export class KpiCardGroup extends Root {
               .icon=${item.icon || ''}
               .colorTheme=${item.color || colors[idx % colors.length]}
               .compact=${this.compact}
+              .details=${item.details || {}}
             ></kpi-card>
           `)}
         </div>
@@ -441,7 +537,16 @@ export class KpiCardGroup extends Root {
   }
 
   private parseItem(item: any, idx: number): KpiData | null {
+    // Keep known KPI keys out of the derived `details` payload.
+    const standardFields = new Set(['label', 'value', 'unit', 'change', 'changeLabel', 'icon', 'color', 'colorTheme', 'details']);
+
     if (item instanceof Map) {
+      const details: Record<string, any> = {};
+      item.forEach((value, key) => {
+        if (!standardFields.has(key)) {
+          details[key] = value;
+        }
+      });
       return {
         label: item.get('label') || `KPI ${idx + 1}`,
         value: item.get('value') || 0,
@@ -449,21 +554,39 @@ export class KpiCardGroup extends Root {
         change: item.get('change'),
         changeLabel: item.get('changeLabel'),
         icon: item.get('icon'),
-        color: item.get('color')
+        color: item.get('color') || item.get('colorTheme'),
+        details: Object.keys(details).length > 0 ? details : item.get('details')
       };
     } else if (item.valueMap) {
       const result: KpiData = { label: `KPI ${idx + 1}`, value: 0 };
+      const details: Record<string, any> = {};
       for (const kv of item.valueMap) {
         if (kv.key === 'label') result.label = kv.valueString || result.label;
-        if (kv.key === 'value') result.value = kv.valueNumber ?? kv.valueString ?? 0;
-        if (kv.key === 'unit') result.unit = kv.valueString;
-        if (kv.key === 'change') result.change = kv.valueNumber;
-        if (kv.key === 'changeLabel') result.changeLabel = kv.valueString;
-        if (kv.key === 'icon') result.icon = kv.valueString;
-        if (kv.key === 'color') result.color = kv.valueString;
+        else if (kv.key === 'value') result.value = kv.valueNumber ?? kv.valueString ?? 0;
+        else if (kv.key === 'unit') result.unit = kv.valueString;
+        else if (kv.key === 'change') result.change = kv.valueNumber;
+        else if (kv.key === 'changeLabel') result.changeLabel = kv.valueString;
+        else if (kv.key === 'icon') result.icon = kv.valueString;
+        else if (kv.key === 'color' || kv.key === 'colorTheme') result.color = kv.valueString;
+        else if (kv.key === 'details' && kv.valueMap) {
+          for (const detailKv of kv.valueMap) {
+            details[detailKv.key] = detailKv.valueString ?? detailKv.valueNumber ?? detailKv.valueBool;
+          }
+        } else if (!standardFields.has(kv.key)) {
+          details[kv.key] = kv.valueString ?? kv.valueNumber ?? kv.valueBool;
+        }
+      }
+      if (Object.keys(details).length > 0) {
+        result.details = details;
       }
       return result;
     } else if (typeof item === 'object') {
+      const details: Record<string, any> = {};
+      for (const key of Object.keys(item)) {
+        if (!standardFields.has(key)) {
+          details[key] = item[key];
+        }
+      }
       return {
         label: item.label || `KPI ${idx + 1}`,
         value: item.value || 0,
@@ -471,7 +594,8 @@ export class KpiCardGroup extends Root {
         change: item.change,
         changeLabel: item.changeLabel,
         icon: item.icon,
-        color: item.color
+        color: item.color || item.colorTheme,
+        details: Object.keys(details).length > 0 ? details : item.details
       };
     }
     return null;

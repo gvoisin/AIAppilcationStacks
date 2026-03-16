@@ -1,3 +1,4 @@
+# region Component Definition
 COMPONENT_NAME = "Column"
 COMPONENT_DESCRIPTION = "Vertical layout container that arranges child components in a column with configurable distribution and alignment."
 EXAMPLE_A2UI_MESSAGE = """
@@ -24,3 +25,5 @@ EXAMPLE_A2UI_MESSAGE = """
     }}
   }}
 ]"""
+# endregion Component Definition
+

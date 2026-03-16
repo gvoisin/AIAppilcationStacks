@@ -1,3 +1,4 @@
+# region Imports
 import os
 from typing import Any
 from langchain_oci import ChatOCIGenAI
@@ -9,10 +10,13 @@ from database.connections import RAGDBConnection
 
 from dotenv import load_dotenv
 load_dotenv()
+# endregion Imports
 
+# region Constants
 EMBED_MODEL = "cohere.embed-v4.0"
+# endregion Constants
 
-
+# region LLM Provider
 class GenAIProvider:
     """Singleton provider for OCI GenAI LLM clients."""
     _instance = None
@@ -25,7 +29,7 @@ class GenAIProvider:
     def __init__(self):
         pass
 
-    def build_oci_client(self, model_id:str="xai.grok-4-fast-non-reasoning", model_kwargs:dict[str,Any] = {}):
+    def build_oci_client(self, model_id: str = "xai.grok-4-fast-non-reasoning", model_kwargs: dict[str, Any] = {}):
         client = ChatOCIGenAI(
             model_id=model_id,
             service_endpoint=os.getenv("SERVICE_ENDPOINT"),
@@ -37,14 +41,16 @@ class GenAIProvider:
         return client
     
     def update_oci_client(
-        self, 
-        client:ChatOCIGenAI, 
-        model_id:str="xai.grok-4-fast-non-reasoning", 
-        model_kwargs:dict[str,Any] = {}
+        self,
+        client: ChatOCIGenAI,
+        model_id: str = "xai.grok-4-fast-non-reasoning",
+        model_kwargs: dict[str, Any] = {}
     ):
-        client.model_id=model_id
-        client.model_kwargs=model_kwargs
+        client.model_id = model_id
+        client.model_kwargs = model_kwargs
+# endregion LLM Provider
 
+# region Embedding Provider
 class GenAIEmbedProvider:
     """Singleton provider for OCI GenAI Embeddings with optional PDF processing capabilities."""
     _instance = None
@@ -66,7 +72,7 @@ class GenAIEmbedProvider:
             compartment_id=os.getenv("COMPARTMENT_ID"),
             auth_profile=os.getenv("AUTH_PROFILE")
         )
-        # PDF processing attributes - initialized when load_pdf is called
+        # Populated when load_pdf() runs.
         self.docs = None
         self.splits = None
         self.texts = None
@@ -108,10 +114,8 @@ class GenAIEmbedProvider:
 
     def load_all_rag_documents(self, db_conn: RAGDBConnection, chunk_size: int = 300, chunk_overlap: int = 200):
         """Load all PDF documents from the rag_docs directory and insert into database."""
-        import os
         rag_docs_dir = "./core/rag_docs/"
 
-        # Create table if it doesn't exist
         with db_conn.get_connection() as conn:
             db_conn.create_table(conn)
 
@@ -128,3 +132,4 @@ class GenAIEmbedProvider:
                 print(f"Error loading {pdf_file}: {e}")
 
         print(f"Successfully loaded and indexed {loaded_count} documents.")
+# endregion Embedding Provider

@@ -1,5 +1,6 @@
+# region Component Definition
 WIDGET_NAME = "MapComponent"
-WIDGET_DESCRIPTION = "component designed to display pins over a map at a given location. Requires exact coordinates and exact coordinates placement for the place of interest"
+WIDGET_DESCRIPTION = "Interactive map component to display location markers with a side panel showing marker details. Each marker requires coordinates (latitude/longitude), a name, and optionally: description, status, and any additional key-value pairs that will be displayed as details in the side panel when a marker is selected. For consistent userAction handling, MapComponent should define action.name as 'flag_circuit' for the flag button interaction."
 WIDGET_SCHEMA = """
 [
   {{ "beginRendering": {{ "surfaceId": "map-view","root": "main-column" }} }},
@@ -12,7 +13,11 @@ WIDGET_SCHEMA = """
           "dataPath": "/mapData",
           "centerLat": 40.7128,
           "centerLng": -74.0060,
-          "zoom": 10
+          "zoom": 10,
+          "showInfoPanel": true,
+          "action": {{
+            "name": "flag_circuit"
+          }}
         }} }} }}
       ]
     }}
@@ -29,7 +34,7 @@ WIDGET_SCHEMA = """
               "valueMap": [
                 {{
                   "key": "name",
-                  "valueString": "New York"
+                  "valueString": "New York Office"
                 }},
                 {{
                   "key": "latitude",
@@ -41,7 +46,19 @@ WIDGET_SCHEMA = """
                 }},
                 {{
                   "key": "description",
-                  "valueString": "The Big Apple"
+                  "valueString": "Main headquarters location"
+                }},
+                {{
+                  "key": "status",
+                  "valueString": "Active"
+                }},
+                {{
+                  "key": "category",
+                  "valueString": "Headquarters"
+                }},
+                {{
+                  "key": "employees",
+                  "valueNumber": 500
                 }}
               ]
             }},
@@ -50,7 +67,7 @@ WIDGET_SCHEMA = """
               "valueMap": [
                 {{
                   "key": "name",
-                  "valueString": "Boston"
+                  "valueString": "Boston Branch"
                 }},
                 {{
                   "key": "latitude",
@@ -62,7 +79,19 @@ WIDGET_SCHEMA = """
                 }},
                 {{
                   "key": "description",
-                  "valueString": "Historic city"
+                  "valueString": "Regional office for Northeast operations"
+                }},
+                {{
+                  "key": "status",
+                  "valueString": "Active"
+                }},
+                {{
+                  "key": "category",
+                  "valueString": "Regional Office"
+                }},
+                {{
+                  "key": "employees",
+                  "valueNumber": 120
                 }}
               ]
             }}
@@ -72,3 +101,5 @@ WIDGET_SCHEMA = """
     }}
   }}
 ]"""
+# endregion Component Definition
+

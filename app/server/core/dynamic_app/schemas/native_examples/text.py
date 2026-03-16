@@ -1,3 +1,4 @@
+# region Component Definition
 COMPONENT_NAME = "Text"
 COMPONENT_DESCRIPTION = "Displays text content with various styling options like headings, body text, or captions."
 EXAMPLE_A2UI_MESSAGE = """
@@ -17,3 +18,5 @@ EXAMPLE_A2UI_MESSAGE = """
     }}
   }}
 ]"""
+# endregion Component Definition
+

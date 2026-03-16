@@ -1,6 +1,9 @@
+# region Imports
 import importlib
 import os
+# endregion Imports
 
+# region Discovery
 def _get_native_example_modules():
     """Automatically discover native component example modules in this directory."""
     current_dir = os.path.dirname(__file__)
@@ -12,7 +15,9 @@ def _get_native_example_modules():
             module_name = filename[:-3]  # Remove .py extension
             modules.append(module_name)
     return modules
+# endregion Discovery
 
+# region Loading
 def _load_native_example(module_name):
     """Load a native component example module and return its definition."""
     try:
@@ -25,10 +30,13 @@ def _load_native_example(module_name):
     except (ImportError, AttributeError) as e:
         print(f"Warning: Could not load native example from {module_name}: {e}")
         return None
+# endregion Loading
 
+# region Catalog
 # Automatically build the catalog from all native example modules in the directory
 NATIVE_MODULES = _get_native_example_modules()
 NATIVE_EXAMPLES_CATALOG = [
     example for module in NATIVE_MODULES
     if (example := _load_native_example(module)) is not None
 ]
+# endregion Catalog

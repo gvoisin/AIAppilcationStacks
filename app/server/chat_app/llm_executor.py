@@ -21,13 +21,17 @@ from chat_app.main_llm import OCIOutageEnergyLLM
 logger = logging.getLogger(__name__)
 
 
+#region Executor
 class OutageEnergyLLMExecutor(AgentExecutor):
-    """Outage and Energy LLM executor Example."""
+    """Executor for outage and energy chat flows."""
 
+    #region Lifecycle
     def __init__(self):
         self.oci_ui_agent = OCIOutageEnergyLLM()
         self.oci_text_agent = OCIOutageEnergyLLM()
+    #endregion
 
+    #region Main Execution
     async def execute(
         self,
         context: RequestContext,
@@ -39,7 +43,6 @@ class OutageEnergyLLMExecutor(AgentExecutor):
             f"--- Client requested extensions: {context.requested_extensions} ---"
         )
 
-        # Determine which agent to use based on whether the a2ui extension is active.
         agent = self.oci_text_agent
 
         session_id = None
@@ -55,7 +58,6 @@ class OutageEnergyLLMExecutor(AgentExecutor):
                     elif "request" in part.root.data:
                         logger.info(f"  Part {i}: Found request in DataPart.")
                         query = part.root.data["request"]
-                        # Extract session ID from metadata
                         if "metadata" in part.root.data and "sessionId" in part.root.data["metadata"]:
                             session_id = part.root.data["metadata"]["sessionId"]
                             logger.info(f"  Part {i}: Found sessionId in metadata: {session_id}")
@@ -106,6 +108,11 @@ class OutageEnergyLLMExecutor(AgentExecutor):
             suggestions = item['suggestions']
             final_parts.append(Part(root=TextPart(text=suggestions.strip())))
 
+            sources = item.get('sources', '[]')
+            final_parts.append(Part(root=TextPart(text=sources.strip())))
+
+            # Keep a stable payload order for clients:
+            # answer, model state, token count, suggestions, sources.
             logger.info("--- FINAL PARTS TO BE SENT ---")
             for i, part in enumerate(final_parts):
                 logger.info(f"  - Part {i}: Type = {type(part.root)}")
@@ -123,8 +130,12 @@ class OutageEnergyLLMExecutor(AgentExecutor):
                 final=True,
             )
             break
+    #endregion
 
+    #region Cancellation
     async def cancel(
         self, request: RequestContext, event_queue: EventQueue
     ) -> Task | None:
         raise ServerError(error=UnsupportedOperationError())
+    #endregion
+#endregion

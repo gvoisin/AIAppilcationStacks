@@ -1,6 +1,9 @@
+# region Imports
 import importlib
 import os
+# endregion Imports
 
+# region Discovery
 def _get_widget_modules():
     """Automatically discover widget modules in this directory."""
     current_dir = os.path.dirname(__file__)
@@ -12,7 +15,9 @@ def _get_widget_modules():
             module_name = filename[:-3]  # Remove .py extension
             modules.append(module_name)
     return modules
+# endregion Discovery
 
+# region Loading
 def _load_widget(module_name):
     """Load a widget module and return its definition."""
     try:
@@ -25,10 +30,13 @@ def _load_widget(module_name):
     except (ImportError, AttributeError) as e:
         print(f"Warning: Could not load widget from {module_name}: {e}")
         return None
+# endregion Loading
 
+# region Catalog
 # Automatically build the catalog from all widget modules in the directory
 WIDGET_MODULES = _get_widget_modules()
 CUSTOM_CATALOG = [
     widget for module in WIDGET_MODULES
     if (widget := _load_widget(module)) is not None
 ]
+# endregion Catalog

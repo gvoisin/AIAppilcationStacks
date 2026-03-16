@@ -1,3 +1,4 @@
+# region Component Definition
 COMPONENT_NAME = "Icon"
 COMPONENT_DESCRIPTION = "Displays predefined icons for visual elements and user interface indicators."
 EXAMPLE_A2UI_MESSAGE = """
@@ -17,3 +18,5 @@ EXAMPLE_A2UI_MESSAGE = """
     }}
   }}
 ]"""
+# endregion Component Definition
+

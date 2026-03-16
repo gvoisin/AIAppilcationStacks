@@ -1,3 +1,4 @@
+# region Component Definition
 COMPONENT_NAME = "Row"
 COMPONENT_DESCRIPTION = "Horizontal layout container that arranges child components side by side with configurable distribution and alignment."
 EXAMPLE_A2UI_MESSAGE = """
@@ -24,3 +25,5 @@ EXAMPLE_A2UI_MESSAGE = """
     }}
   }}
 ]"""
+# endregion Component Definition
+

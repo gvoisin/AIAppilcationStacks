@@ -7,6 +7,8 @@ from database.connections import RAGDBConnection
 from dotenv import load_dotenv
 load_dotenv()
 
+
+#region Helpers
 def build_context_snippet(results: list[dict]) -> str:
     """Format retrieved chunks for prompt context."""
     if not results:
@@ -16,10 +18,13 @@ def build_context_snippet(results: list[dict]) -> str:
         snippet = r["text"].replace("\n", " ")
         context_parts.append(f"[{i}] (Source: {r['source']}) {snippet}")
     return "\n\n".join(context_parts)
+#endregion
 
+
+#region Tool
 @tool()
 async def semantic_search(query: str, top_k: int = 3) -> str:
-    """Perform semantic search with cosine similarity to find relevant documents:
+    """Perform cosine-similarity search over available document chunks:
     [epa_actions_for_outages (US), fema_outage_flyer (US), general_disaster_manual (MEX)]
     """
     
@@ -32,8 +37,7 @@ async def semantic_search(query: str, top_k: int = 3) -> str:
         
         with db_conn.get_connection() as connection:
             cursor = connection.cursor()
-            
-            # Execute similarity search
+
             cursor.execute(f"""
                 SELECT text, vector_distance(vec, :1, COSINE) AS distance, source
                 FROM {db_conn.table_prefix}_embedding
@@ -48,3 +52,4 @@ async def semantic_search(query: str, top_k: int = 3) -> str:
         return build_context_snippet(results)
     except Exception as e:
         return f"Error performing semantic search: {str(e)}"
+#endregion

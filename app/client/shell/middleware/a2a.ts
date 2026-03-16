@@ -25,8 +25,11 @@ import {
 } from "@a2a-js/sdk";
 import { v4 as uuidv4 } from "uuid";
 
+// #region Constants
 const A2UI_MIME_TYPE = "application/json+a2ui";
+// #endregion Constants
 
+// #region Helpers
 const fetchWithCustomHeader: typeof fetch = async (url, init) => {
   const headers = new Headers(init?.headers);
   headers.set("X-A2A-Extensions", "https://a2ui.org/a2a-extension/a2ui/v0.8");
@@ -46,7 +49,9 @@ const isJson = (str: string) => {
     return false;
   }
 };
+// #endregion Helpers
 
+// #region Client
 let client: A2AClient | null = null;
 const createOrGetClient = async () => {
   if (!client) {
@@ -59,7 +64,9 @@ const createOrGetClient = async () => {
 
   return client;
 };
+// #endregion Client
 
+// #region Vite Plugin
 export const plugin = (): Plugin => {
   return {
     name: "a2a-handler",
@@ -151,3 +158,4 @@ export const plugin = (): Plugin => {
     },
   };
 };
+// #endregion Vite Plugin

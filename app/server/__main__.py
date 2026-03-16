@@ -1,5 +1,6 @@
 import logging
 import httpx
+from pathlib import Path
 
 import click
 from a2a.server.apps import A2AStarletteApplication
@@ -10,11 +11,13 @@ from starlette.applications import Starlette
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
 from starlette.requests import Request
+from starlette.staticfiles import StaticFiles
 
 from chat_app.llm_executor import OutageEnergyLLMExecutor
 from chat_app.main_llm import OCIOutageEnergyLLM
 from dynamic_app.dynamic_agents_graph import DynamicGraph
 from dynamic_app.dynamic_graph_executor import DynamicGraphExecutor
+from mock_executors import MockDynamicExecutor, MockLLMExecutor
 from core.dynamic_app.a2a_config_provider import (
     dynamic_agent_capabilities,
     get_widget_catalog,
@@ -31,17 +34,21 @@ from traditional_app.data_provider import (
 from dotenv import load_dotenv
 load_dotenv()
 
-logging.basicConfig(level=logging.WARNING)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 @click.command()
 @click.option("--host", default="localhost")
 @click.option("--port", default=10002)
-def main(host, port):
+@click.option("--mock", is_flag=True, default=False, help="Run credential-free mock executors for UI testing")
+def main(host, port, mock):
     try:
         base_url = f"http://{host}:{port}"
 
-        #region Agent executor setup
+        if mock:
+            logger.warning("Starting server in mock mode (no OCI credentials required)")
+
+        # region Agent executor setup
         agent_base_url = f"{base_url}/agent"
         agent_card = AgentCard(
             name="Energy Outage Agent",
@@ -54,7 +61,7 @@ def main(host, port):
             skills=[get_widget_catalog,get_widget_schema],
         )
 
-        agent_executor = DynamicGraphExecutor(base_url=agent_base_url)
+        agent_executor = MockDynamicExecutor() if mock else DynamicGraphExecutor(base_url=agent_base_url)
 
         httpx_client = httpx.AsyncClient()
         agent_push_config_store = InMemoryPushNotificationConfigStore()
@@ -75,8 +82,9 @@ def main(host, port):
         )
 
         agent_app = agent_server.build()
+        # endregion
 
-        #region LLM executor setup
+        # region LLM executor setup
         llm_base_url = f"{base_url}/llm"
         llm_capabilities = dynamic_agent_capabilities
         llm_skills = []
@@ -91,7 +99,7 @@ def main(host, port):
             skills=llm_skills,
         )
 
-        llm_executor = OutageEnergyLLMExecutor()
+        llm_executor = MockLLMExecutor() if mock else OutageEnergyLLMExecutor()
 
         llm_push_config_store = InMemoryPushNotificationConfigStore()
         llm_push_sender = BasePushNotificationSender(httpx_client=httpx_client,
@@ -106,8 +114,9 @@ def main(host, port):
             agent_card=llm_card, http_handler=llm_request_handler
         )
         llm_app = llm_server.build()
+        # endregion
 
-        #region main app setup
+        # region Main app setup
         main_app = Starlette()
 
         main_app.add_middleware(
@@ -118,7 +127,7 @@ def main(host, port):
             allow_headers=["*"],
         )
 
-        #region config endpoints
+        # region Config endpoints
         async def get_config(request: Request):
             config = agent_executor.get_config()
             return JSONResponse(config)
@@ -137,8 +146,9 @@ def main(host, port):
         async def delete_config(request: Request):
             agent_executor.reset_config()
             return JSONResponse({"status": "success", "message": "Configuration reset to default"})
+        # endregion
 
-        #region traditional endpoints
+        # region Traditional endpoints
         async def get_traditional_outage(request: Request):
             try:
                 messages = await get_traditional_outage_messages()
@@ -178,8 +188,9 @@ def main(host, port):
             except Exception as e:
                 logger.error(f"Error getting traditional timeline data: {e}")
                 return JSONResponse({"error": "Failed to retrieve timeline data"}, status_code=500)
+        # endregion
 
-        #region app mount
+        # region Route registration and app mount
         main_app.add_route("/agent/config", get_config, methods=["GET"])
         main_app.add_route("/agent/config", post_config, methods=["POST"])
         main_app.add_route("/agent/config", delete_config, methods=["DELETE"])
@@ -189,8 +200,15 @@ def main(host, port):
         main_app.add_route("/traditional/timeline", get_traditional_timeline, methods=["GET"])
         main_app.add_route("/traditional/industry", get_traditional_industry, methods=["GET"])
 
+        # Serve RAG source documents so clients can open source links.
+        rag_docs_dir = Path(__file__).resolve().parent / "core" / "rag_docs"
+        if rag_docs_dir.exists():
+            main_app.mount("/rag_docs", StaticFiles(directory=str(rag_docs_dir)), name="rag_docs")
+
         main_app.mount("/agent", agent_app)
         main_app.mount("/llm", llm_app)
+        # endregion
+        # endregion
 
         import uvicorn
         uvicorn.run(main_app, host=host, port=port)
