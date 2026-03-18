@@ -13,3 +13,6 @@ __pycache__
 
 ## mac files
 **/.DS_Store
+
+## local files
+scratch/**

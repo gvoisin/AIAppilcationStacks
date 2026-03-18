@@ -4,7 +4,6 @@ import json
 from collections.abc import AsyncIterable
 from typing import Any
 from langchain.agents import create_agent
-from langchain_oci import ChatOCIGenAI
 from langchain.messages import HumanMessage, AIMessage, ToolMessage
 from langgraph.graph.state import CompiledStateGraph
 from langchain_core.runnables import RunnableConfig
@@ -14,6 +13,7 @@ from core.chat_app.prompts import MAIN_LLM_INSTRUCTIONS
 from core.common_struct import SuggestionModel
 from core.common_struct import SuggestedQuestions
 from core.common_struct import SUGGESTION_QUERY
+from core.gen_ai_provider import GenAIProvider
 from chat_app.rag_tool import semantic_search
 from chat_app.nl2sql_agent import call_SQL_DB
 
@@ -57,13 +57,7 @@ class OCIOutageEnergyLLM:
 
     def _build_agent(self) -> CompiledStateGraph:
         """Builds the LLM agent for the outage and energy agent."""
-        oci_llm = ChatOCIGenAI(
-            model_id="xai.grok-4-fast-non-reasoning",
-            service_endpoint=os.getenv("SERVICE_ENDPOINT"),
-            compartment_id=os.getenv("COMPARTMENT_ID"),
-            model_kwargs={"temperature":0.7},
-            auth_profile=os.getenv("AUTH_PROFILE"),
-        )
+        oci_llm = GenAIProvider().build_oci_client(model_kwargs={"temperature":0.7})
 
         return create_agent(
             model=oci_llm,
@@ -72,6 +66,20 @@ class OCIOutageEnergyLLM:
             name="outage_energy_llm",
             checkpointer= InMemorySaver()
         )
+
+    async def _generate_suggestions(self, final_response_content: str | None) -> SuggestedQuestions:
+        """Generate follow-up suggestions with a simple fallback for empty results."""
+        suggestions = await self._suggestion_out.ainvoke(
+            self._out_query + f"\n\nContext for question generation:\n{final_response_content}"
+        )
+        if not suggestions:
+            suggestions = SuggestedQuestions(
+                suggested_questions=[
+                    "Tell me more details about first data",
+                    "Make a summary of data given",
+                ]
+            )
+        return suggestions
     #endregion
     
     #region Streaming
@@ -137,8 +145,7 @@ class OCIOutageEnergyLLM:
                     "updates": update_text
                 }
 
-        suggestions = await self._suggestion_out.ainvoke(self._out_query+f"\n\nContext for question generation:\n{final_response_content}")
-        if not suggestions: suggestions = SuggestedQuestions(suggested_questions=["Tell me more details about first data", "Make a summary of data given"])
+        suggestions = await self._generate_suggestions(final_response_content)
         
         yield {
             "is_task_complete": True,
