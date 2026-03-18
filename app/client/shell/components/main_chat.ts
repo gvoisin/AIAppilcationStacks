@@ -75,8 +75,9 @@ export class ChatModule extends LitElement {
       timestamp: Date.now()
     }];
     this.#pendingResponse = true;
+    this.#requestScrollToBottom();
     console.log("Query sent to LLM");
-    this.status = [];
+    this.#resetStatusForNewRequest();
   };
 
   // #region Lifecycle
@@ -98,6 +99,12 @@ export class ChatModule extends LitElement {
     }
     super.disconnectedCallback();
   }
+
+  protected updated(changedProperties: Map<string | number | symbol, unknown>) {
+    if (changedProperties.has("messages")) {
+      this.#scrollToBottom();
+    }
+  }
   // #endregion Lifecycle
 
   // #region Streaming
@@ -117,6 +124,8 @@ export class ChatModule extends LitElement {
       console.log("server message", serverState);
       const messageSources = isFinal ? this.#parseSources(serverState[4]?.text || "[]") : [];
 
+      this.#resetStatusIfNewTurnFromStream(serverMessage, isFinal);
+
       if (isFinal && serverState[2]?.text) {
         this.tokenCount = serverState[2].text;
       }
@@ -132,7 +141,7 @@ export class ChatModule extends LitElement {
                 timestamp: Date.now()
               }];
               this.#pendingResponse = false;
-              this.updateComplete.then(() => this.#scrollToBottom());
+              this.#requestScrollToBottom();
             }
             
             // Skip final echo; only incremental updates are useful in the log.
@@ -196,6 +205,33 @@ export class ChatModule extends LitElement {
     }
   }
 
+  #resetStatusForNewRequest() {
+    this.status = [];
+  }
+
+  #getVisibleStatus() {
+    return this.status;
+  }
+
+  #resetStatusIfNewTurnFromStream(serverMessage: string, isFinal: boolean) {
+    if (isFinal) {
+      return;
+    }
+
+    const isProcessingStep = /^Model processing:/i.test(serverMessage.trim());
+    if (!isProcessingStep || this.status.length === 0) {
+      return;
+    }
+
+    const previousTurnCompleted = this.status.some((item) =>
+      /^Model responded:/i.test(item.message) || item.type === "error"
+    );
+
+    if (previousTurnCompleted) {
+      this.#resetStatusForNewRequest();
+    }
+  }
+
   // Accept JSON suggestions or plain text split by newline/comma.
   #parseSuggestions(suggestionsText: string): string[] {
     try {
@@ -223,10 +259,14 @@ export class ChatModule extends LitElement {
 
   // #region UI Helpers
   #scrollToBottom() {
-    const chatContainer = this.shadowRoot?.querySelector('.chat-messages');
+    const chatContainer = this.shadowRoot?.querySelector('.chat-messages') as HTMLElement | null;
     if (chatContainer) {
       chatContainer.scrollTop = chatContainer.scrollHeight;
     }
+  }
+
+  #requestScrollToBottom() {
+    this.updateComplete.then(() => this.#scrollToBottom());
   }
 
   #parseSources(sourcesText: string): string[] {
@@ -250,7 +290,8 @@ export class ChatModule extends LitElement {
   }
 
   #getCurrentPendingText() {
-    const latestStatusText = this.status[this.status.length - 1]?.message;
+    const visibleStatus = this.#getVisibleStatus();
+    const latestStatusText = visibleStatus[visibleStatus.length - 1]?.message;
     if (typeof latestStatusText === "string" && latestStatusText.trim().length > 0) {
       return latestStatusText;
     }
@@ -592,7 +633,7 @@ export class ChatModule extends LitElement {
           </div>
         </div>
       ` : ''}
-      <status-drawer .items=${this.status} accentColor="var(--oracle-primary)"></status-drawer>
+      <status-drawer .items=${this.#getVisibleStatus()} accentColor="var(--oracle-primary)"></status-drawer>
     `;
   }
   
