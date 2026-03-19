@@ -10,3 +10,9 @@ dist
 uv.lock
 __pycache__
 .pytest_cache
+
+## mac files
+**/.DS_Store
+
+## local files
+scratch/**

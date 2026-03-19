@@ -1,10 +1,12 @@
 # region Imports
 import os
 from typing import Any
-from langchain_oci import ChatOCIGenAI
+import httpx
 from langchain_community.document_loaders import PyPDFLoader
+from langchain_openai import ChatOpenAI
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_oci.embeddings import OCIGenAIEmbeddings
+from oci_openai import OciUserPrincipalAuth
 
 from database.connections import RAGDBConnection
 
@@ -14,6 +16,7 @@ load_dotenv()
 
 # region Constants
 EMBED_MODEL = "cohere.embed-v4.0"
+DEFAULT_CHAT_MODEL = "xai.grok-4-fast-non-reasoning"
 # endregion Constants
 
 # region LLM Provider
@@ -29,25 +32,43 @@ class GenAIProvider:
     def __init__(self):
         pass
 
-    def build_oci_client(self, model_id: str = "xai.grok-4-fast-non-reasoning", model_kwargs: dict[str, Any] = {}):
-        client = ChatOCIGenAI(
-            model_id=model_id,
-            service_endpoint=os.getenv("SERVICE_ENDPOINT"),
-            compartment_id=os.getenv("COMPARTMENT_ID"),
-            model_kwargs=model_kwargs,
-            auth_profile=os.getenv("AUTH_PROFILE"),
+    def _build_default_headers(self) -> dict[str, str]:
+        headers = {
+            "opc-compartment-id": os.getenv("COMPARTMENT_ID", ""),
+        }
+
+        conversation_store_id = os.getenv("OCI_CONVERSATION_STORE_ID")
+        if conversation_store_id:
+            headers["opc-conversation-store-id"] = conversation_store_id
+
+        return headers
+
+    def build_oci_client(self, model_id: str | None = None, model_kwargs: dict[str, Any] | None = None):
+        resolved_model_id = model_id or os.getenv("GEN_AI_MODEL", DEFAULT_CHAT_MODEL)
+        resolved_model_kwargs = model_kwargs or {}
+
+        client = ChatOpenAI(
+            base_url=os.getenv("SERVICE_ENDPOINT", "https://inference.generativeai.us-chicago-1.oci.oraclecloud.com/20231130/actions/v1"),
+            http_client=httpx.Client(
+                auth=OciUserPrincipalAuth(profile_name=os.getenv("AUTH_PROFILE"))
+            ),
+            default_headers=self._build_default_headers(),
+            api_key=os.getenv("OPENAI_INNO_DEV1"),
+            model=resolved_model_id,
+            store=False,
+            **resolved_model_kwargs,
         )
 
         return client
     
     def update_oci_client(
         self,
-        client: ChatOCIGenAI,
-        model_id: str = "xai.grok-4-fast-non-reasoning",
-        model_kwargs: dict[str, Any] = {}
+        client: ChatOpenAI,
+        model_id: str | None = None,
+        model_kwargs: dict[str, Any] | None = None
     ):
-        client.model_id = model_id
-        client.model_kwargs = model_kwargs
+        client.model_name = model_id or self.get_default_chat_model()
+        client.model_kwargs = model_kwargs or {}
 # endregion LLM Provider
 
 # region Embedding Provider
