@@ -1,5 +1,6 @@
 import logging
 import httpx
+import os
 from pathlib import Path
 
 import click
@@ -12,6 +13,9 @@ from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import JSONResponse
 from starlette.requests import Request
 from starlette.staticfiles import StaticFiles
+
+from langfuse import Langfuse
+from opentelemetry.sdk.trace import TracerProvider
 
 from chat_app.llm_executor import OutageEnergyLLMExecutor
 from chat_app.main_llm import OCIOutageEnergyLLM
@@ -34,7 +38,7 @@ from traditional_app.data_provider import (
 from dotenv import load_dotenv
 load_dotenv()
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
 @click.command()
@@ -43,6 +47,14 @@ logger = logging.getLogger(__name__)
 @click.option("--mock", is_flag=True, default=False, help="Run credential-free mock executors for UI testing")
 def main(host, port, mock):
     try:
+        langfuse_client = Langfuse(
+            public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
+            secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
+            host=os.getenv("LANGFUSE_HOST"),
+            timeout=60,
+            tracer_provider=TracerProvider(),
+        )
+        
         base_url = f"http://{host}:{port}"
 
         if mock:
@@ -61,7 +73,10 @@ def main(host, port, mock):
             skills=[get_widget_catalog,get_widget_schema],
         )
 
-        agent_executor = MockDynamicExecutor() if mock else DynamicGraphExecutor(base_url=agent_base_url)
+        agent_executor = MockDynamicExecutor() if mock else DynamicGraphExecutor(
+            base_url=agent_base_url,
+            langfuse_client=langfuse_client,
+        )
 
         httpx_client = httpx.AsyncClient()
         agent_push_config_store = InMemoryPushNotificationConfigStore()
@@ -99,7 +114,7 @@ def main(host, port, mock):
             skills=llm_skills,
         )
 
-        llm_executor = MockLLMExecutor() if mock else OutageEnergyLLMExecutor()
+        llm_executor = MockLLMExecutor() if mock else OutageEnergyLLMExecutor(langfuse_client)
 
         llm_push_config_store = InMemoryPushNotificationConfigStore()
         llm_push_sender = BasePushNotificationSender(httpx_client=httpx_client,

@@ -4,6 +4,7 @@ import logging
 import copy
 from dataclasses import asdict
 import jsonschema
+from langfuse import Langfuse
 
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
@@ -33,22 +34,25 @@ class DynamicGraphExecutor(AgentExecutor):
     """Executor for the full dynamic graph pipeline."""
 
     #region Lifecycle
-    def __init__(self, base_url: str):
+    def __init__(self, base_url: str, langfuse_client: Langfuse):
         self.default_config = copy.deepcopy(DEFAULT_CONFIG)
         self.current_config = copy.deepcopy(self.default_config)
         self.base_url = base_url
+        self.langfuse_client = langfuse_client
         self._recreate_graphs()
 
     def _recreate_graphs(self):
         """Recreate graph instances with current config"""
         self.ui_dynamic_graph = DynamicGraph(
             base_url=self.base_url,
+            langfuse_client=self.langfuse_client,
             use_ui=True,
             graph_configuration=self.current_config,
             inline_catalog=None  # Will be set at execution time
         )
         self._dynamic_graph = DynamicGraph(
             base_url=self.base_url,
+            langfuse_client=self.langfuse_client,
             use_ui=False,
             graph_configuration=self.current_config,
             inline_catalog=None

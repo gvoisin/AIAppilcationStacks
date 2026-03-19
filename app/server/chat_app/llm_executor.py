@@ -1,4 +1,6 @@
 import logging
+
+from langfuse import Langfuse
 from a2a.server.agent_execution import AgentExecutor, RequestContext
 from a2a.server.events import EventQueue
 from a2a.server.tasks import TaskUpdater
@@ -26,9 +28,9 @@ class OutageEnergyLLMExecutor(AgentExecutor):
     """Executor for outage and energy chat flows."""
 
     #region Lifecycle
-    def __init__(self):
-        self.oci_ui_agent = OCIOutageEnergyLLM()
-        self.oci_text_agent = OCIOutageEnergyLLM()
+    def __init__(self, langfuse_client: Langfuse):
+        self.oci_ui_agent = OCIOutageEnergyLLM(langfuse_client)
+        self.oci_text_agent = OCIOutageEnergyLLM(langfuse_client)
     #endregion
 
     #region Main Execution
