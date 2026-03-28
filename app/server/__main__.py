@@ -1,5 +1,4 @@
 import logging
-import httpx
 import os
 from pathlib import Path
 
@@ -17,11 +16,12 @@ from starlette.staticfiles import StaticFiles
 from langfuse import Langfuse
 from opentelemetry.sdk.trace import TracerProvider
 
-from chat_app.llm_executor import OutageEnergyLLMExecutor
-from chat_app.main_llm import OCIOutageEnergyLLM
+from chat_app.llm_executor import LimagrainLLMExecutor
+from chat_app.main_llm import OCILimagrainLLM
 from dynamic_app.dynamic_agents_graph import DynamicGraph
 from dynamic_app.dynamic_graph_executor import DynamicGraphExecutor
 from mock_executors import MockDynamicExecutor, MockLLMExecutor
+from database.connections import RAGDBConnection
 from core.dynamic_app.a2a_config_provider import (
     dynamic_agent_capabilities,
     get_widget_catalog,
@@ -36,9 +36,11 @@ from traditional_app.data_provider import (
 )
 
 from dotenv import load_dotenv
+from core.external_logging import setup_logging
+from core.gen_ai_provider import TracedAsyncHttpxClient
 load_dotenv()
 
-logging.basicConfig(level=logging.INFO)
+setup_logging()
 logger = logging.getLogger(__name__)
 
 @click.command()
@@ -78,7 +80,7 @@ def main(host, port, mock):
             langfuse_client=langfuse_client,
         )
 
-        httpx_client = httpx.AsyncClient()
+        httpx_client = TracedAsyncHttpxClient()
         agent_push_config_store = InMemoryPushNotificationConfigStore()
         agent_push_sender = BasePushNotificationSender(
             httpx_client=httpx_client,
@@ -108,13 +110,13 @@ def main(host, port, mock):
             description="This LLM agent provides information about power outages, energy statistics, and industry performance.",
             url=llm_base_url,
             version="1.0.0",
-            default_input_modes=OCIOutageEnergyLLM.SUPPORTED_CONTENT_TYPES,
-            default_output_modes=OCIOutageEnergyLLM.SUPPORTED_CONTENT_TYPES,
+            default_input_modes=OCILimagrainLLM.SUPPORTED_CONTENT_TYPES,
+            default_output_modes=OCILimagrainLLM.SUPPORTED_CONTENT_TYPES,
             capabilities=llm_capabilities,
             skills=llm_skills,
         )
 
-        llm_executor = MockLLMExecutor() if mock else OutageEnergyLLMExecutor(langfuse_client)
+        llm_executor = MockLLMExecutor() if mock else LimagrainLLMExecutor(langfuse_client)
 
         llm_push_config_store = InMemoryPushNotificationConfigStore()
         llm_push_sender = BasePushNotificationSender(httpx_client=httpx_client,
@@ -161,6 +163,51 @@ def main(host, port, mock):
         async def delete_config(request: Request):
             agent_executor.reset_config()
             return JSONResponse({"status": "success", "message": "Configuration reset to default"})
+
+        async def get_db_health(request: Request):
+            db_conn = RAGDBConnection()
+            ok, error = db_conn.preflight_check()
+            payload = {
+                "status": "ok" if ok else "error",
+                "database": "oracle",
+                "connection": db_conn.connection_config_snapshot(),
+            }
+            if ok:
+                return JSONResponse(payload)
+
+            payload["message"] = "Oracle connectivity preflight failed"
+            payload["details"] = error
+            status_code = 503
+            return JSONResponse(payload, status_code=status_code)
+
+        async def get_graph_health(request: Request):
+            db_conn = RAGDBConnection()
+            ok, error = db_conn.preflight_check()
+            payload = {
+                "status": "ok" if ok else "error",
+                "database": "oracle",
+                "graph": "limagrain_operations",
+                "connection": db_conn.connection_config_snapshot(),
+            }
+            if not ok:
+                payload["message"] = "Oracle connectivity preflight failed"
+                payload["details"] = error
+                return JSONResponse(payload, status_code=503)
+
+            graph_exists, graph_error = db_conn.property_graph_exists("limagrain_operations")
+            if graph_error is not None:
+                payload["status"] = "error"
+                payload["message"] = "Property graph existence check failed"
+                payload["details"] = graph_error
+                return JSONResponse(payload, status_code=503)
+
+            payload["graph_exists"] = graph_exists
+            if graph_exists:
+                return JSONResponse(payload)
+
+            payload["status"] = "error"
+            payload["message"] = "Property graph limagrain_operations not found"
+            return JSONResponse(payload, status_code=503)
         # endregion
 
         # region Traditional endpoints
@@ -206,6 +253,8 @@ def main(host, port, mock):
         # endregion
 
         # region Route registration and app mount
+        main_app.add_route("/health/db", get_db_health, methods=["GET"])
+        main_app.add_route("/health/graph", get_graph_health, methods=["GET"])
         main_app.add_route("/agent/config", get_config, methods=["GET"])
         main_app.add_route("/agent/config", post_config, methods=["POST"])
         main_app.add_route("/agent/config", delete_config, methods=["DELETE"])

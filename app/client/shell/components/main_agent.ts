@@ -35,6 +35,14 @@ import { AppConfig } from "../configs/types.js";
 import { config as restaurantConfig } from "../configs/restaurant.js";
 import { agentConfig } from "../configs/agent_config.js";
 
+const INITIAL_AGENT_SUGGESTIONS = JSON.stringify({
+  suggested_questions: [
+    "Construis un espace de pilotage pour HM.CLAUSE et Hazera",
+    "Prepare un cockpit de suivi Vilmorin-Mikado",
+    "Cree une vue transverse Limagrain Vegetable Seeds",
+  ],
+});
+
 // #region Component
 @customElement("dynamic-module")
 export class DynamicModule extends LitElement {
@@ -63,7 +71,7 @@ export class DynamicModule extends LitElement {
   accessor status: Array<{ timestamp: number, duration: number, message: string, type: string }> = [{ timestamp: Date.now(), duration: 0, message: "Ready", type: "initial" }]
 
   @state()
-  accessor suggestions = ""
+  accessor suggestions = INITIAL_AGENT_SUGGESTIONS
 
   @state()
   accessor tokenCount = ""
@@ -168,7 +176,7 @@ export class DynamicModule extends LitElement {
       }
 
       .user-question-label {
-        font-size: var(--font-size-xs);
+        font-size: 0.72rem;
         opacity: 0.7;
         text-transform: uppercase;
         margin-bottom: var(--space-xs);
@@ -271,7 +279,7 @@ export class DynamicModule extends LitElement {
     .sources-floating {
       flex-shrink: 0;
       margin: 0 var(--space-md) var(--space-sm);
-      font-size: var(--font-size-xs);
+      font-size: 0.72rem;
       line-height: 1.5;
       color: var(--text-secondary);
       background: transparent;
@@ -620,7 +628,7 @@ export class DynamicModule extends LitElement {
       ></stat-bar>
       ${this.#lastUserQuestion ? html`
         <div class="user-question">
-          <div class="user-question-label">You</div>
+          <div class="user-question-label">Vous</div>
           <div class="user-question-text">${this.#lastUserQuestion}</div>
         </div>
       ` : ''}

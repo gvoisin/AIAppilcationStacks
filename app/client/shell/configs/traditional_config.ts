@@ -2,7 +2,7 @@ import { TraditionalConfig } from "./types.js";
 
 export const traditionalConfig: TraditionalConfig = {
   databaseType: "PostgreSQL",
-  businessBranch: "New York",
-  apiEndpoint: "https://api.example.com/v1",
+  businessBranch: "LIMAGRAIN Vegetable Seeds - Operations metier",
+  apiEndpoint: "https://api.demo-limagrain.local/v1",
   theme: "default"
 };

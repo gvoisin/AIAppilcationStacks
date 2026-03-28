@@ -36,7 +36,7 @@ export class StaticModule extends LitElement {
       const messages: v0_8.Types.ServerToClientMessage[] = await response.json();
       this.processor.processMessages(messages);
     } catch (error) {
-      console.error('Failed to fetch outage data from server:', error);
+      console.error('Echec du chargement des alertes operationnelles depuis le serveur :', error);
       // Fall back to local data if the server is unavailable.
       this.initializeStaticData();
     }
@@ -83,492 +83,384 @@ export class StaticModule extends LitElement {
 
   // #region Static Fallback Data
   private initializeStaticData() {
-    // Static fallback data for offline testing.
     const messages: v0_8.Types.ServerToClientMessage[] = [
       {
         dataModelUpdate: {
           surfaceId: 'default',
           path: '/',
           contents: [
-            // KPI data
             {
               key: 'energyKPIs',
               valueMap: [
                 { key: '0', valueMap: [
-                  { key: 'label', valueString: 'Total Production' },
-                  { key: 'value', valueNumber: 2847 },
-                  { key: 'unit', valueString: 'GWh' },
-                  { key: 'change', valueNumber: 12.5 },
-                  { key: 'changeLabel', valueString: 'vs last month' },
-                  { key: 'icon', valueString: '⚡' },
+                  { key: 'label', valueString: 'Coordination portefeuille semences potageres' },
+                  { key: 'value', valueNumber: 128400 },
+                  { key: 'unit', valueString: 't' },
+                  { key: 'change', valueNumber: 6.2 },
+                  { key: 'changeLabel', valueString: 'vs periode precedente' },
+                  { key: 'icon', valueString: '🌾' },
                   { key: 'colorTheme', valueString: 'cyan' },
-                  { key: 'trend', valueString: 'rising steadily over Q4' },
-                  { key: 'forecast', valueString: '3100 GWh expected next month' },
-                  { key: 'breakdown', valueString: 'Solar: 45%, Wind: 30%, Hydro: 25%' }
+                  { key: 'trend', valueString: 'hausse des volumes de semences potageres sur tomate, poivron et carotte' },
+                  { key: 'forecast', valueString: '132000 unites logistiques attendues sur la prochaine periode' },
+                  { key: 'breakdown', valueString: 'Tomate: 28%, Poivron: 18%, Carotte: 16%, Melon: 14%, Laitue: 12%, Autres: 12%' }
                 ]},
                 { key: '1', valueMap: [
-                  { key: 'label', valueString: 'Active Outages' },
-                  { key: 'value', valueNumber: 25 },
+                  { key: 'label', valueString: 'Alertes ouvertes' },
+                  { key: 'value', valueNumber: 3 },
                   { key: 'unit', valueString: '' },
-                  { key: 'change', valueNumber: -8 },
-                  { key: 'changeLabel', valueString: 'vs yesterday' },
-                  { key: 'icon', valueString: '🔌' },
+                  { key: 'change', valueNumber: -14 },
+                  { key: 'changeLabel', valueString: 'vs hier' },
+                  { key: 'icon', valueString: '🚜' },
                   { key: 'colorTheme', valueString: 'coral' },
-                  { key: 'trend', valueString: 'decreasing after storm recovery' },
-                  { key: 'breakdown', valueString: 'High: 5, Medium: 12, Low: 8' }
+                  { key: 'trend', valueString: 'baisse des alertes grace aux plans de contournement' },
+                  { key: 'breakdown', valueString: 'Critique: 1, Elevee: 1, Moyenne: 1' }
                 ]},
                 { key: '2', valueMap: [
-                  { key: 'label', valueString: 'Customers Affected' },
-                  { key: 'value', valueNumber: 15420 },
-                  { key: 'unit', valueString: '' },
-                  { key: 'change', valueNumber: -22 },
-                  { key: 'changeLabel', valueString: 'vs peak' },
-                  { key: 'icon', valueString: '👥' },
+                  { key: 'label', valueString: 'Service logistique' },
+                  { key: 'value', valueNumber: 96.4 },
+                  { key: 'unit', valueString: '%' },
+                  { key: 'change', valueNumber: 1.1 },
+                  { key: 'changeLabel', valueString: 'vs objectif' },
+                  { key: 'icon', valueString: '📦' },
                   { key: 'colorTheme', valueString: 'teal' },
-                  { key: 'trend', valueString: 'restoration in progress' },
-                  { key: 'affectedDistricts', valueString: 'Downtown, North, East District' }
+                  { key: 'trend', valueString: 'niveau OTIF superieur a la cible interne' },
+                  { key: 'factors', valueString: 'planification transport, sites tampons et coordination filieres' }
                 ]},
                 { key: '3', valueMap: [
-                  { key: 'label', valueString: 'Grid Efficiency' },
-                  { key: 'value', valueNumber: 94.2 },
+                  { key: 'label', valueString: 'Conformite marques et tracabilite' },
+                  { key: 'value', valueNumber: 99.2 },
                   { key: 'unit', valueString: '%' },
-                  { key: 'change', valueNumber: 1.8 },
-                  { key: 'changeLabel', valueString: 'vs baseline' },
-                  { key: 'icon', valueString: '📊' },
+                  { key: 'change', valueNumber: 0.4 },
+                  { key: 'changeLabel', valueString: 'vs mois dernier' },
+                  { key: 'icon', valueString: '🔎' },
                   { key: 'colorTheme', valueString: 'green' },
-                  { key: 'trend', valueString: 'above target of 92%' },
-                  { key: 'factors', valueString: 'Smart grid upgrades, load balancing improvements' }
+                  { key: 'trend', valueString: 'conformite elevee sur les lots HM.CLAUSE, Hazera et Vilmorin-Mikado' },
+                  { key: 'forecast', valueString: '99.4% vises le mois prochain' },
+                  { key: 'breakdown', valueString: 'Premier passage: 97%, apres correction: 2.2%' }
                 ]}
               ]
             },
-            // Outage summary data
             {
               key: 'outageSummary',
               valueMap: [
-                { key: '0', valueNumber: 25 },
-                { key: '1', valueNumber: 15 },
-                { key: '2', valueNumber: 42 },
-                { key: '3', valueNumber: 8 },
-                { key: '4', valueNumber: 12 }
+                { key: '0', valueNumber: 2 },
+                { key: '1', valueNumber: 1 },
+                { key: '2', valueNumber: 1 },
+                { key: '3', valueNumber: 1 },
+                { key: '4', valueNumber: 1 }
               ]
             },
             {
               key: 'outageSummaryLabels',
               valueMap: [
-                { key: '0', valueString: 'Active' },
-                { key: '1', valueString: 'Investigating' },
-                { key: '2', valueString: 'Resolved' },
-                { key: '3', valueString: 'Scheduled' },
-                { key: '4', valueString: 'Monitoring' }
+                { key: '0', valueString: 'Ouverte' },
+                { key: '1', valueString: 'En analyse' },
+                { key: '2', valueString: 'Resolue' },
+                { key: '3', valueString: 'Planifiee' },
+                { key: '4', valueString: 'Sous surveillance' }
               ]
             },
-            // Per-bar details
             {
               key: 'outageSummaryDetails',
               valueMap: [
                 { key: '0', valueMap: [
-                  { key: 'status', valueString: 'Active' },
-                  { key: 'customersAffected', valueNumber: 1870 },
-                  { key: 'severityBreakdown', valueString: 'High: 5, Medium: 12, Low: 8' },
-                  { key: 'topAreas', valueString: 'Downtown, West Residential' },
-                  { key: 'mainCauses', valueString: 'Transformer failure, Cable fault' },
-                  { key: 'priority', valueString: 'Immediate response required' }
+                  { key: 'status', valueString: 'Ouverte' },
+                  { key: 'customersAffected', valueNumber: 2142 },
+                  { key: 'severityBreakdown', valueString: 'Elevee: 1, Moyenne: 1' },
+                  { key: 'topAreas', valueString: 'Clermont-Ferrand, Valencia' },
+                  { key: 'mainCauses', valueString: 'Retards de portefeuille, retard transporteur' },
+                  { key: 'priority', valueString: 'Mobilisation immediate sur les flux amont' }
                 ]},
                 { key: '1', valueMap: [
-                  { key: 'status', valueString: 'Investigating' },
-                  { key: 'customersAffected', valueNumber: 850 },
-                  { key: 'severityBreakdown', valueString: 'High: 2, Medium: 8, Low: 5' },
-                  { key: 'topAreas', valueString: 'North Substation' },
-                  { key: 'mainCauses', valueString: 'Equipment malfunction' },
-                  { key: 'estimatedResolution', valueString: 'Under assessment' }
+                  { key: 'status', valueString: 'En analyse' },
+                  { key: 'customersAffected', valueNumber: 86000 },
+                  { key: 'severityBreakdown', valueString: 'Critique: 1' },
+                  { key: 'topAreas', valueString: 'Site de production EMEA' },
+                  { key: 'mainCauses', valueString: 'Renforcement qualite preventif' },
+                  { key: 'estimatedResolution', valueString: 'Audit terrain et qualite en cours' }
                 ]},
                 { key: '2', valueMap: [
-                  { key: 'status', valueString: 'Resolved' },
-                  { key: 'customersRestored', valueNumber: 5420 },
-                  { key: 'resolutionRate', valueString: '100% service restored' },
-                  { key: 'topAreas', valueString: 'East District, South Grid' },
-                  { key: 'mainCauses', valueString: 'Tree contact, Minor faults' },
-                  { key: 'avgResolutionTime', valueString: '2.5 hours' }
+                  { key: 'status', valueString: 'Resolue' },
+                  { key: 'customersRestored', valueNumber: 125 },
+                  { key: 'resolutionRate', valueString: 'Flux documentaires remis au nominal' },
+                  { key: 'topAreas', valueString: 'Bangkok' },
+                  { key: 'mainCauses', valueString: 'Anomalie de tracabilite' },
+                  { key: 'avgResolutionTime', valueString: '7 h 40 en moyenne' }
                 ]},
                 { key: '3', valueMap: [
-                  { key: 'status', valueString: 'Scheduled' },
-                  { key: 'plannedCustomers', valueNumber: 45 },
-                  { key: 'scheduledWindow', valueString: 'Next 48 hours' },
-                  { key: 'topAreas', valueString: 'Industrial Park' },
-                  { key: 'maintenanceType', valueString: 'Preventive maintenance' },
-                  { key: 'notificationSent', valueString: 'Yes - 72hrs advance' }
+                  { key: 'status', valueString: 'Planifiee' },
+                  { key: 'plannedCustomers', valueNumber: 18 },
+                  { key: 'scheduledWindow', valueString: 'Cette nuit 01:00 - 05:30' },
+                  { key: 'topAreas', valueString: 'Woodland' },
+                  { key: 'maintenanceType', valueString: 'Maintenance preventive sur une ligne de processing de lots export' },
+                  { key: 'notificationSent', valueString: 'Oui - enseignes prevenues' }
                 ]},
                 { key: '4', valueMap: [
-                  { key: 'status', valueString: 'Monitoring' },
-                  { key: 'customersWatched', valueNumber: 1200 },
-                  { key: 'monitoringLevel', valueString: 'Standard observation' },
-                  { key: 'topAreas', valueString: 'Central Grid, Harbor District' },
-                  { key: 'lastChecked', valueString: '5 minutes ago' },
-                  { key: 'alertThreshold', valueString: 'Auto-escalate if no improvement' }
+                  { key: 'status', valueString: 'Sous surveillance' },
+                  { key: 'customersWatched', valueNumber: 27 },
+                  { key: 'monitoringLevel', valueString: 'Controle documentaire et reroutage' },
+                  { key: 'topAreas', valueString: 'Chappes' },
+                  { key: 'lastChecked', valueString: 'Mise a jour il y a 12 minutes' },
+                  { key: 'alertThreshold', valueString: 'Escalade automatique si ecart documentaire ou retard' }
                 ]}
               ]
             },
-            // Outage table
             {
               key: 'outageTable',
               valueMap: [
                 { key: '0', valueMap: [
-                  { key: 'id', valueString: 'OUT-001' },
-                  { key: 'location', valueString: 'Downtown Grid' },
-                  { key: 'status', valueString: 'Active' },
-                  { key: 'severity', valueString: 'High' },
-                  { key: 'startTime', valueString: '2024-01-15T14:30:00Z' },
-                  { key: 'estimatedRestoration', valueString: '2024-01-15T18:00:00Z' },
-                  { key: 'affectedCustomers', valueNumber: 1250 },
-                  { key: 'cause', valueString: 'Transformer failure due to storm damage' },
-                  { key: 'crewAssigned', valueString: 'Team Alpha - 5 technicians' },
-                  { key: 'priority', valueString: 'Critical - Hospital in area' },
-                  { key: 'notes', valueString: 'Emergency backup generators activated at local hospital. Replacement transformer en route.' }
+                  { key: 'id', valueString: 'ALT-001' },
+                  { key: 'location', valueString: 'Clermont-Ferrand, coordination portefeuille' },
+                  { key: 'status', valueString: 'Ouverte' },
+                  { key: 'severity', valueString: 'Elevee' },
+                  { key: 'startTime', valueString: '2026-03-18T05:30:00Z' },
+                  { key: 'estimatedRestoration', valueString: '2026-03-18T16:00:00Z' },
+                  { key: 'affectedCustomers', valueNumber: 2100 }
                 ]},
                 { key: '1', valueMap: [
-                  { key: 'id', valueString: 'OUT-002' },
-                  { key: 'location', valueString: 'North Substation' },
-                  { key: 'status', valueString: 'Investigating' },
-                  { key: 'severity', valueString: 'Medium' },
-                  { key: 'startTime', valueString: '2024-01-15T12:15:00Z' },
-                  { key: 'estimatedRestoration', valueString: '2024-01-15T16:30:00Z' },
-                  { key: 'affectedCustomers', valueNumber: 850 },
-                  { key: 'cause', valueString: 'Suspected equipment malfunction' },
-                  { key: 'crewAssigned', valueString: 'Team Beta - 3 technicians' },
-                  { key: 'priority', valueString: 'Standard residential area' },
-                  { key: 'notes', valueString: 'Diagnostic team analyzing sensor data. May require equipment replacement.' }
+                  { key: 'id', valueString: 'ALT-002' },
+                  { key: 'location', valueString: 'Murcia, production semences EMEA' },
+                  { key: 'status', valueString: 'En analyse' },
+                  { key: 'severity', valueString: 'Critique' },
+                  { key: 'startTime', valueString: '2026-03-18T07:10:00Z' },
+                  { key: 'estimatedRestoration', valueString: '2026-03-19T12:00:00Z' },
+                  { key: 'affectedCustomers', valueNumber: 86000 }
                 ]},
                 { key: '2', valueMap: [
-                  { key: 'id', valueString: 'OUT-003' },
-                  { key: 'location', valueString: 'East District' },
-                  { key: 'status', valueString: 'Resolved' },
-                  { key: 'severity', valueString: 'Low' },
-                  { key: 'startTime', valueString: '2024-01-14T09:45:00Z' },
-                  { key: 'estimatedRestoration', valueString: '2024-01-14T11:20:00Z' },
-                  { key: 'affectedCustomers', valueNumber: 320 },
-                  { key: 'cause', valueString: 'Tree branch contact with power line' },
-                  { key: 'crewAssigned', valueString: 'Team Charlie - 2 technicians' },
-                  { key: 'priority', valueString: 'Standard' },
-                  { key: 'notes', valueString: 'Branch removed, line inspected, all systems nominal.' }
+                  { key: 'id', valueString: 'ALT-003' },
+                  { key: 'location', valueString: 'Valencia, essais et selection' },
+                  { key: 'status', valueString: 'Ouverte' },
+                  { key: 'severity', valueString: 'Moyenne' },
+                  { key: 'startTime', valueString: '2026-03-17T13:45:00Z' },
+                  { key: 'estimatedRestoration', valueString: '2026-03-18T10:00:00Z' },
+                  { key: 'affectedCustomers', valueNumber: 42 }
                 ]},
                 { key: '3', valueMap: [
-                  { key: 'id', valueString: 'OUT-004' },
-                  { key: 'location', valueString: 'Industrial Park' },
-                  { key: 'status', valueString: 'Scheduled' },
-                  { key: 'severity', valueString: 'Low' },
-                  { key: 'startTime', valueString: '2024-01-16T02:00:00Z' },
-                  { key: 'estimatedRestoration', valueString: '2024-01-16T06:00:00Z' },
-                  { key: 'affectedCustomers', valueNumber: 45 },
-                  { key: 'cause', valueString: 'Planned maintenance - transformer upgrade' },
-                  { key: 'crewAssigned', valueString: 'Team Delta - 4 technicians' },
-                  { key: 'priority', valueString: 'Off-peak scheduled maintenance' },
-                  { key: 'notes', valueString: 'All affected businesses notified 48 hours in advance.' }
+                  { key: 'id', valueString: 'ALT-004' },
+                  { key: 'location', valueString: 'Woodland, processing semences' },
+                  { key: 'status', valueString: 'Planifiee' },
+                  { key: 'severity', valueString: 'Faible' },
+                  { key: 'startTime', valueString: '2026-03-19T01:00:00Z' },
+                  { key: 'estimatedRestoration', valueString: '2026-03-19T05:30:00Z' },
+                  { key: 'affectedCustomers', valueNumber: 18 }
                 ]},
                 { key: '4', valueMap: [
-                  { key: 'id', valueString: 'OUT-005' },
-                  { key: 'location', valueString: 'West Residential' },
-                  { key: 'status', valueString: 'Active' },
-                  { key: 'severity', valueString: 'Medium' },
-                  { key: 'startTime', valueString: '2024-01-15T15:45:00Z' },
-                  { key: 'estimatedRestoration', valueString: '2024-01-15T19:30:00Z' },
-                  { key: 'affectedCustomers', valueNumber: 620 },
-                  { key: 'cause', valueString: 'Underground cable fault' },
-                  { key: 'crewAssigned', valueString: 'Team Echo - 6 technicians' },
-                  { key: 'priority', valueString: 'Elevated - Multiple senior facilities' },
-                  { key: 'notes', valueString: 'Cable locator equipment deployed. Excavation may be required.' }
+                  { key: 'id', valueString: 'ALT-005' },
+                  { key: 'location', valueString: 'Bangkok, hub export APAC' },
+                  { key: 'status', valueString: 'Resolue' },
+                  { key: 'severity', valueString: 'Moyenne' },
+                  { key: 'startTime', valueString: '2026-03-17T09:20:00Z' },
+                  { key: 'estimatedRestoration', valueString: '2026-03-17T17:00:00Z' },
+                  { key: 'affectedCustomers', valueNumber: 125 }
+                ]},
+                { key: '5', valueMap: [
+                  { key: 'id', valueString: 'ALT-006' },
+                  { key: 'location', valueString: 'Chappes' },
+                  { key: 'status', valueString: 'Sous surveillance' },
+                  { key: 'severity', valueString: 'Moyenne' },
+                  { key: 'startTime', valueString: '2026-03-18T04:40:00Z' },
+                  { key: 'estimatedRestoration', valueString: '2026-03-18T11:30:00Z' },
+                  { key: 'affectedCustomers', valueNumber: 27 }
                 ]}
               ]
             },
-            // Timeline events
-            {
-              key: 'timelineEvents',
-              valueMap: [
-                { key: '0', valueMap: [
-                  { key: 'date', valueString: '2024-01-15T15:45:00Z' },
-                  { key: 'title', valueString: 'West Residential Outage' },
-                  { key: 'description', valueString: 'Underground cable fault detected in West Residential area' },
-                  { key: 'status', valueString: 'Active' },
-                  { key: 'affectedCustomers', valueNumber: 620 },
-                  { key: 'location', valueString: 'West Residential District' },
-                  { key: 'assignedCrew', valueString: 'Team Echo' },
-                  { key: 'estimatedDuration', valueString: '4 hours' }
-                ]},
-                { key: '1', valueMap: [
-                  { key: 'date', valueString: '2024-01-15T14:30:00Z' },
-                  { key: 'title', valueString: 'Downtown Grid Emergency' },
-                  { key: 'description', valueString: 'Major transformer failure affecting downtown business district' },
-                  { key: 'status', valueString: 'Active' },
-                  { key: 'affectedCustomers', valueNumber: 1250 },
-                  { key: 'location', valueString: 'Downtown Grid - Sectors A-C' },
-                  { key: 'assignedCrew', valueString: 'Team Alpha' },
-                  { key: 'estimatedDuration', valueString: '3.5 hours' }
-                ]},
-                { key: '2', valueMap: [
-                  { key: 'date', valueString: '2024-01-15T12:15:00Z' },
-                  { key: 'title', valueString: 'North Substation Investigation' },
-                  { key: 'description', valueString: 'Anomalous readings detected, investigation underway' },
-                  { key: 'status', valueString: 'Investigating' },
-                  { key: 'affectedCustomers', valueNumber: 850 },
-                  { key: 'location', valueString: 'North Substation Area' },
-                  { key: 'assignedCrew', valueString: 'Team Beta' },
-                  { key: 'estimatedDuration', valueString: '4.5 hours' }
-                ]},
-                { key: '3', valueMap: [
-                  { key: 'date', valueString: '2024-01-14T11:20:00Z' },
-                  { key: 'title', valueString: 'East District Restored' },
-                  { key: 'description', valueString: 'Power fully restored after tree branch removal' },
-                  { key: 'status', valueString: 'Resolved' },
-                  { key: 'affectedCustomers', valueNumber: 320 },
-                  { key: 'location', valueString: 'East District' },
-                  { key: 'assignedCrew', valueString: 'Team Charlie' },
-                  { key: 'resolutionTime', valueString: '1.5 hours' }
-                ]},
-                { key: '4', valueMap: [
-                  { key: 'date', valueString: '2024-01-14T08:00:00Z' },
-                  { key: 'title', valueString: 'Morning Grid Check Complete' },
-                  { key: 'description', valueString: 'Daily automated grid inspection completed successfully' },
-                  { key: 'status', valueString: 'Completed' },
-                  { key: 'location', valueString: 'All Sectors' },
-                  { key: 'notes', valueString: '3 minor anomalies flagged for review' }
-                ]}
-              ]
-            },
-            // Map markers
-            {
-              key: 'mapMarkers',
-              valueMap: [
-                { key: '0', valueMap: [
-                  { key: 'name', valueString: 'Downtown Grid' },
-                  { key: 'latitude', valueNumber: 40.7589 },
-                  { key: 'longitude', valueNumber: -73.9851 },
-                  { key: 'description', valueString: 'Active outage - Transformer failure' },
-                  { key: 'status', valueString: 'Active' },
-                  { key: 'severity', valueString: 'High' },
-                  { key: 'affectedCustomers', valueNumber: 1250 },
-                  { key: 'crew', valueString: 'Team Alpha on site' }
-                ]},
-                { key: '1', valueMap: [
-                  { key: 'name', valueString: 'North Substation' },
-                  { key: 'latitude', valueNumber: 40.7829 },
-                  { key: 'longitude', valueNumber: -73.9654 },
-                  { key: 'description', valueString: 'Under investigation - Equipment check' },
-                  { key: 'status', valueString: 'Investigating' },
-                  { key: 'severity', valueString: 'Medium' },
-                  { key: 'affectedCustomers', valueNumber: 850 },
-                  { key: 'crew', valueString: 'Team Beta investigating' }
-                ]},
-                { key: '2', valueMap: [
-                  { key: 'name', valueString: 'East District' },
-                  { key: 'latitude', valueNumber: 40.7505 },
-                  { key: 'longitude', valueNumber: -73.9934 },
-                  { key: 'description', valueString: 'Restored - Active monitoring' },
-                  { key: 'status', valueString: 'Resolved' },
-                  { key: 'severity', valueString: 'Low' },
-                  { key: 'affectedCustomers', valueNumber: 0 },
-                  { key: 'crew', valueString: 'Monitoring remotely' }
-                ]},
-                { key: '3', valueMap: [
-                  { key: 'name', valueString: 'West Residential' },
-                  { key: 'latitude', valueNumber: 40.7420 },
-                  { key: 'longitude', valueNumber: -74.0080 },
-                  { key: 'description', valueString: 'Active outage - Underground cable fault' },
-                  { key: 'status', valueString: 'Active' },
-                  { key: 'severity', valueString: 'Medium' },
-                  { key: 'affectedCustomers', valueNumber: 620 },
-                  { key: 'crew', valueString: 'Team Echo deploying equipment' }
-                ]},
-                { key: '4', valueMap: [
-                  { key: 'name', valueString: 'Industrial Park' },
-                  { key: 'latitude', valueNumber: 40.7680 },
-                  { key: 'longitude', valueNumber: -73.9500 },
-                  { key: 'description', valueString: 'Scheduled maintenance tonight' },
-                  { key: 'status', valueString: 'Scheduled' },
-                  { key: 'severity', valueString: 'Low' },
-                  { key: 'affectedCustomers', valueNumber: 45 },
-                  { key: 'crew', valueString: 'Team Delta scheduled 2am' }
-                ]}
-              ]
-            },
-            // Energy trends
-            {
-              key: 'trends',
-              valueMap: [
-                { key: 'energyTrend', valueMap: [
-                  { key: '0', valueMap: [
-                    { key: 'name', valueString: 'Solar' },
-                    { key: 'color', valueString: '#FFB547' },
-                    { key: 'values', valueMap: [
-                      { key: '0', valueNumber: 450 },
-                      { key: '1', valueNumber: 520 },
-                      { key: '2', valueNumber: 680 },
-                      { key: '3', valueNumber: 890 },
-                      { key: '4', valueNumber: 1050 },
-                      { key: '5', valueNumber: 1180 },
-                      { key: '6', valueNumber: 1250 },
-                      { key: '7', valueNumber: 1100 },
-                      { key: '8', valueNumber: 920 },
-                      { key: '9', valueNumber: 680 },
-                      { key: '10', valueNumber: 520 },
-                      { key: '11', valueNumber: 480 }
-                    ]}
-                  ]},
-                  { key: '1', valueMap: [
-                    { key: 'name', valueString: 'Wind' },
-                    { key: 'color', valueString: '#4ECDC4' },
-                    { key: 'values', valueMap: [
-                      { key: '0', valueNumber: 650 },
-                      { key: '1', valueNumber: 580 },
-                      { key: '2', valueNumber: 720 },
-                      { key: '3', valueNumber: 540 },
-                      { key: '4', valueNumber: 680 },
-                      { key: '5', valueNumber: 750 },
-                      { key: '6', valueNumber: 820 },
-                      { key: '7', valueNumber: 900 },
-                      { key: '8', valueNumber: 780 },
-                      { key: '9', valueNumber: 850 },
-                      { key: '10', valueNumber: 720 },
-                      { key: '11', valueNumber: 690 }
-                    ]}
-                  ]},
-                  { key: '2', valueMap: [
-                    { key: 'name', valueString: 'Hydro' },
-                    { key: 'color', valueString: '#45B7D1' },
-                    { key: 'values', valueMap: [
-                      { key: '0', valueNumber: 320 },
-                      { key: '1', valueNumber: 340 },
-                      { key: '2', valueNumber: 380 },
-                      { key: '3', valueNumber: 420 },
-                      { key: '4', valueNumber: 480 },
-                      { key: '5', valueNumber: 520 },
-                      { key: '6', valueNumber: 490 },
-                      { key: '7', valueNumber: 450 },
-                      { key: '8', valueNumber: 400 },
-                      { key: '9', valueNumber: 360 },
-                      { key: '10', valueNumber: 340 },
-                      { key: '11', valueNumber: 330 }
-                    ]}
-                  ]}
-                ]},
-                { key: 'energyTrendLabels', valueMap: [
-                  { key: '0', valueString: 'Jan' },
-                  { key: '1', valueString: 'Feb' },
-                  { key: '2', valueString: 'Mar' },
-                  { key: '3', valueString: 'Apr' },
-                  { key: '4', valueString: 'May' },
-                  { key: '5', valueString: 'Jun' },
-                  { key: '6', valueString: 'Jul' },
-                  { key: '7', valueString: 'Aug' },
-                  { key: '8', valueString: 'Sep' },
-                  { key: '9', valueString: 'Oct' },
-                  { key: '10', valueString: 'Nov' },
-                  { key: '11', valueString: 'Dec' }
-                ]},
-                { key: 'energyTrendDetails', valueMap: [
-                  { key: '0', valueMap: [{ key: 'period', valueString: 'January' }, { key: 'trend', valueString: 'Winter baseline output' }, { key: 'forecast', valueString: 'Expected increase next month' }]},
-                  { key: '1', valueMap: [{ key: 'period', valueString: 'February' }, { key: 'trend', valueString: 'Seasonal ramp-up' }, { key: 'forecast', valueString: 'Continued growth expected' }]},
-                  { key: '2', valueMap: [{ key: 'period', valueString: 'March' }, { key: 'trend', valueString: 'Strong spring growth' }, { key: 'forecast', valueString: 'Above-average production likely' }]},
-                  { key: '3', valueMap: [{ key: 'period', valueString: 'April' }, { key: 'trend', valueString: 'Rapid acceleration' }, { key: 'forecast', valueString: 'Near-summer peak expected' }]},
-                  { key: '4', valueMap: [{ key: 'period', valueString: 'May' }, { key: 'trend', valueString: 'High output period' }, { key: 'forecast', valueString: 'Stable high generation' }]},
-                  { key: '5', valueMap: [{ key: 'period', valueString: 'June' }, { key: 'trend', valueString: 'Summer peak onset' }, { key: 'forecast', valueString: 'Potential monthly maximum' }]},
-                  { key: '6', valueMap: [{ key: 'period', valueString: 'July' }, { key: 'trend', valueString: 'Sustained peak' }, { key: 'forecast', valueString: 'Slight taper expected' }]},
-                  { key: '7', valueMap: [{ key: 'period', valueString: 'August' }, { key: 'trend', valueString: 'Post-peak normalization' }, { key: 'forecast', valueString: 'Gradual decline expected' }]},
-                  { key: '8', valueMap: [{ key: 'period', valueString: 'September' }, { key: 'trend', valueString: 'Early autumn decline' }, { key: 'forecast', valueString: 'Further reduction likely' }]},
-                  { key: '9', valueMap: [{ key: 'period', valueString: 'October' }, { key: 'trend', valueString: 'Autumn stabilization' }, { key: 'forecast', valueString: 'Low volatility expected' }]},
-                  { key: '10', valueMap: [{ key: 'period', valueString: 'November' }, { key: 'trend', valueString: 'Pre-winter reduction' }, { key: 'forecast', valueString: 'Seasonal low approaching' }]},
-                  { key: '11', valueMap: [{ key: 'period', valueString: 'December' }, { key: 'trend', valueString: 'Winter trough' }, { key: 'forecast', valueString: 'Recovery expected in Q1' }]}
-                ]}
-              ]
-            },
-            // Timeline
             {
               key: 'timeline',
               valueMap: [
                 { key: 'timelineEvents', valueMap: [
                   { key: '0', valueMap: [
-                    { key: 'date', valueString: '2024-01-15T15:45:00Z' },
-                    { key: 'title', valueString: 'West Residential Outage Reported' },
-                    { key: 'description', valueString: 'Underground cable fault detected in residential area' },
-                    { key: 'status', valueString: 'Active' },
-                    { key: 'affectedArea', valueString: 'West Residential - Blocks 12-18' },
-                    { key: 'assignedTeam', valueString: 'Team Echo (6 technicians)' }
+                    { key: 'date', valueString: '2026-03-18T05:30:00Z' },
+                    { key: 'title', valueString: 'Retard de coordination portefeuille semences sur le hub principal' },
+                    { key: 'description', valueString: 'La saturation des capacites ralentit la preparation de plusieurs lots critiques' },
+                    { key: 'status', valueString: 'Ouverte' },
+                    { key: 'affectedArea', valueString: 'Clermont-Ferrand et coordination centrale' },
+                    { key: 'assignedTeam', valueString: 'Cellule logistique Ouest' }
                   ]},
                   { key: '1', valueMap: [
-                    { key: 'date', valueString: '2024-01-15T14:30:00Z' },
-                    { key: 'title', valueString: 'Downtown Grid Emergency Response' },
-                    { key: 'description', valueString: 'Major transformer failure affecting business district' },
-                    { key: 'status', valueString: 'Active' },
-                    { key: 'affectedArea', valueString: 'Downtown Sectors A, B, C' },
-                    { key: 'assignedTeam', valueString: 'Team Alpha (5 technicians)' }
+                    { key: 'date', valueString: '2026-03-18T07:10:00Z' },
+                    { key: 'title', valueString: 'Controle qualite renforce pour HM.CLAUSE sur un site de production' },
+                    { key: 'description', valueString: 'Trois lots strategiques passent sous protocole de controle renforce' },
+                    { key: 'status', valueString: 'En analyse' },
+                    { key: 'affectedArea', valueString: 'Site de production EMEA' },
+                    { key: 'assignedTeam', valueString: 'Equipe qualite semences HM.CLAUSE' }
                   ]},
                   { key: '2', valueMap: [
-                    { key: 'date', valueString: '2024-01-15T12:15:00Z' },
-                    { key: 'title', valueString: 'North Substation Alert Triggered' },
-                    { key: 'description', valueString: 'Automated monitoring detected anomalous readings' },
-                    { key: 'status', valueString: 'Investigating' },
-                    { key: 'affectedArea', valueString: 'North Substation perimeter' },
-                    { key: 'assignedTeam', valueString: 'Team Beta (3 technicians)' }
+                    { key: 'date', valueString: '2026-03-17T13:45:00Z' },
+                    { key: 'title', valueString: 'Retard tournee semences' },
+                    { key: 'description', valueString: 'Une tournee varietale est reroutee depuis un depot regional' },
+                    { key: 'status', valueString: 'Ouverte' },
+                    { key: 'affectedArea', valueString: 'Valencia, essais et selection' },
+                    { key: 'assignedTeam', valueString: 'ADV semences' }
                   ]},
                   { key: '3', valueMap: [
-                    { key: 'date', valueString: '2024-01-14T11:20:00Z' },
-                    { key: 'title', valueString: 'East District Power Restoration Complete' },
-                    { key: 'description', valueString: 'All affected customers restored after tree branch removal' },
-                    { key: 'status', valueString: 'Resolved' },
-                    { key: 'resolution', valueString: 'Tree branch cleared, line inspected and tested' },
-                    { key: 'duration', valueString: '1 hour 35 minutes' }
+                    { key: 'date', valueString: '2026-03-17T17:00:00Z' },
+                    { key: 'title', valueString: 'Blocage export Vilmorin-Mikado leve' },
+                    { key: 'description', valueString: 'Le lot Vilmorin-Mikado est conforme apres verification documentaire' },
+                    { key: 'status', valueString: 'Resolue' },
+                    { key: 'resolution', valueString: 'Traceabilite revalidee et expedition relancee' },
+                    { key: 'duration', valueString: '7 h 40' }
                   ]}
                 ]},
                 { key: 'timelineEventDetails', valueMap: [
-                  { key: '0', valueMap: [{ key: 'status', valueString: 'Active' }, { key: 'affectedArea', valueString: 'West Residential - Blocks 12-18' }, { key: 'assignedTeam', valueString: 'Team Echo (6 technicians)' }]},
-                  { key: '1', valueMap: [{ key: 'status', valueString: 'Active' }, { key: 'affectedArea', valueString: 'Downtown Sectors A, B, C' }, { key: 'assignedTeam', valueString: 'Team Alpha (5 technicians)' }]},
-                  { key: '2', valueMap: [{ key: 'status', valueString: 'Investigating' }, { key: 'affectedArea', valueString: 'North Substation perimeter' }, { key: 'assignedTeam', valueString: 'Team Beta (3 technicians)' }]},
-                  { key: '3', valueMap: [{ key: 'status', valueString: 'Resolved' }, { key: 'resolution', valueString: 'Tree branch cleared, line inspected and tested' }, { key: 'duration', valueString: '1 hour 35 minutes' }]}
+                  { key: '0', valueMap: [{ key: 'status', valueString: 'Ouverte' }, { key: 'affectedArea', valueString: 'Clermont-Ferrand et coordination centrale' }, { key: 'assignedTeam', valueString: 'Cellule logistique Ouest' }]},
+                  { key: '1', valueMap: [{ key: 'status', valueString: 'En analyse' }, { key: 'affectedArea', valueString: 'Site de production EMEA' }, { key: 'assignedTeam', valueString: 'Equipe qualite semences HM.CLAUSE' }]},
+                  { key: '2', valueMap: [{ key: 'status', valueString: 'Ouverte' }, { key: 'affectedArea', valueString: 'Valencia, essais et selection' }, { key: 'assignedTeam', valueString: 'ADV semences' }]},
+                  { key: '3', valueMap: [{ key: 'status', valueString: 'Resolue' }, { key: 'resolution', valueString: 'Traceabilite revalidee et expedition relancee' }, { key: 'duration', valueString: '7 h 40' }]}
                 ]}
               ]
             },
-            // Industry metrics
+            {
+              key: 'mapMarkers',
+              valueMap: [
+                { key: '0', valueMap: [
+                  { key: 'name', valueString: 'Clermont-Ferrand, coordination portefeuille' },
+                  { key: 'latitude', valueNumber: 47.3656 },
+                  { key: 'longitude', valueNumber: -1.1772 },
+                  { key: 'description', valueString: 'Ouverte - retard de coordination portefeuille' },
+                  { key: 'status', valueString: 'Ouverte' },
+                  { key: 'severity', valueString: 'Elevee' },
+                  { key: 'affectedCustomers', valueNumber: 2100 },
+                  { key: 'crew', valueString: 'Cellule logistique Ouest' }
+                ]},
+                { key: '1', valueMap: [
+                  { key: 'name', valueString: 'Murcia, production semences EMEA' },
+                  { key: 'latitude', valueNumber: 46.67 },
+                  { key: 'longitude', valueNumber: -1.43 },
+                  { key: 'description', valueString: 'En analyse - protocole qualite renforce' },
+                  { key: 'status', valueString: 'En analyse' },
+                  { key: 'severity', valueString: 'Critique' },
+                  { key: 'affectedCustomers', valueNumber: 86000 },
+                  { key: 'crew', valueString: 'Equipe qualite semences HM.CLAUSE' }
+                ]},
+                { key: '2', valueMap: [
+                  { key: 'name', valueString: 'Woodland, processing semences' },
+                  { key: 'latitude', valueNumber: 47.0594 },
+                  { key: 'longitude', valueNumber: -0.879 },
+                  { key: 'description', valueString: 'Planifiee - maintenance processing' },
+                  { key: 'status', valueString: 'Planifiee' },
+                  { key: 'severity', valueString: 'Faible' },
+                  { key: 'affectedCustomers', valueNumber: 18 },
+                  { key: 'crew', valueString: 'Maintenance industrielle' }
+                ]},
+                { key: '3', valueMap: [
+                  { key: 'name', valueString: 'Bangkok, hub export APAC' },
+                  { key: 'latitude', valueNumber: 47.2597 },
+                  { key: 'longitude', valueNumber: -0.0781 },
+                  { key: 'description', valueString: 'Resolue - tracabilite lot export' },
+                  { key: 'status', valueString: 'Resolue' },
+                  { key: 'severity', valueString: 'Moyenne' },
+                  { key: 'affectedCustomers', valueNumber: 125 },
+                  { key: 'crew', valueString: 'Qualite export Vilmorin-Mikado' }
+                ]},
+                { key: '4', valueMap: [
+                  { key: 'name', valueString: 'Chappes' },
+                  { key: 'latitude', valueNumber: 47.2184 },
+                  { key: 'longitude', valueNumber: -1.5536 },
+                  { key: 'description', valueString: 'Sous surveillance - reroutage documentaire export' },
+                  { key: 'status', valueString: 'Sous surveillance' },
+                  { key: 'severity', valueString: 'Moyenne' },
+                  { key: 'affectedCustomers', valueNumber: 27 },
+                  { key: 'crew', valueString: 'Pilotage qualite documentaire' }
+                ]}
+              ]
+            },
+            {
+              key: 'trends',
+              valueMap: [
+                { key: 'energyTrend', valueMap: [
+                  { key: '0', valueMap: [
+                    { key: 'name', valueString: 'Coordination portefeuille semences potageres' },
+                    { key: 'color', valueString: '#D4A017' },
+                    { key: 'values', valueMap: [
+                      { key: '0', valueNumber: 82 }, { key: '1', valueNumber: 88 }, { key: '2', valueNumber: 95 }, { key: '3', valueNumber: 101 },
+                      { key: '4', valueNumber: 110 }, { key: '5', valueNumber: 124 }, { key: '6', valueNumber: 138 }, { key: '7', valueNumber: 132 },
+                      { key: '8', valueNumber: 118 }, { key: '9', valueNumber: 109 }, { key: '10', valueNumber: 97 }, { key: '11', valueNumber: 90 }
+                    ]}
+                  ]},
+                  { key: '1', valueMap: [
+                    { key: 'name', valueString: 'Distribution export' },
+                    { key: 'color', valueString: '#4ECDC4' },
+                    { key: 'values', valueMap: [
+                      { key: '0', valueNumber: 96 }, { key: '1', valueNumber: 94 }, { key: '2', valueNumber: 98 }, { key: '3', valueNumber: 102 },
+                      { key: '4', valueNumber: 106 }, { key: '5', valueNumber: 108 }, { key: '6', valueNumber: 111 }, { key: '7', valueNumber: 109 },
+                      { key: '8', valueNumber: 107 }, { key: '9', valueNumber: 104 }, { key: '10', valueNumber: 101 }, { key: '11', valueNumber: 99 }
+                    ]}
+                  ]},
+                  { key: '2', valueMap: [
+                    { key: 'name', valueString: 'Production HM.CLAUSE / Hazera' },
+                    { key: 'color', valueString: '#FF7F50' },
+                    { key: 'values', valueMap: [
+                      { key: '0', valueNumber: 90 }, { key: '1', valueNumber: 91 }, { key: '2', valueNumber: 93 }, { key: '3', valueNumber: 95 },
+                      { key: '4', valueNumber: 99 }, { key: '5', valueNumber: 104 }, { key: '6', valueNumber: 108 }, { key: '7', valueNumber: 107 },
+                      { key: '8', valueNumber: 105 }, { key: '9', valueNumber: 103 }, { key: '10', valueNumber: 101 }, { key: '11', valueNumber: 98 }
+                    ]}
+                  ]},
+                  { key: '3', valueMap: [
+                    { key: 'name', valueString: 'Commandes semences et filieres marqueses' },
+                    { key: 'color', valueString: '#2E8B57' },
+                    { key: 'values', valueMap: [
+                      { key: '0', valueNumber: 72 }, { key: '1', valueNumber: 78 }, { key: '2', valueNumber: 89 }, { key: '3', valueNumber: 98 },
+                      { key: '4', valueNumber: 104 }, { key: '5', valueNumber: 99 }, { key: '6', valueNumber: 86 }, { key: '7', valueNumber: 79 },
+                      { key: '8', valueNumber: 84 }, { key: '9', valueNumber: 96 }, { key: '10', valueNumber: 108 }, { key: '11', valueNumber: 115 }
+                    ]}
+                  ]}
+                ]},
+                { key: 'energyTrendLabels', valueMap: [
+                  { key: '0', valueString: 'Jan' }, { key: '1', valueString: 'Fev' }, { key: '2', valueString: 'Mar' }, { key: '3', valueString: 'Avr' },
+                  { key: '4', valueString: 'Mai' }, { key: '5', valueString: 'Jun' }, { key: '6', valueString: 'Jul' }, { key: '7', valueString: 'Aou' },
+                  { key: '8', valueString: 'Sep' }, { key: '9', valueString: 'Oct' }, { key: '10', valueString: 'Nov' }, { key: '11', valueString: 'Dec' }
+                ]},
+                { key: 'energyTrendDetails', valueMap: [
+                  { key: '0', valueMap: [{ key: 'period', valueString: 'Janvier' }, { key: 'trend', valueString: 'Suivi des stocks hivernaux et preparation des semis' }, { key: 'forecast', valueString: 'Legere hausse des commandes de semences' }]},
+                  { key: '1', valueMap: [{ key: 'period', valueString: 'Fevrier' }, { key: 'trend', valueString: 'Acceleration des travaux de printemps' }, { key: 'forecast', valueString: 'Hausse des besoins logistiques attendue' }]},
+                  { key: '2', valueMap: [{ key: 'period', valueString: 'Mars' }, { key: 'trend', valueString: 'Montee en charge des interventions agronomiques' }, { key: 'forecast', valueString: 'Volumes semences au dessus du plan' }]},
+                  { key: '3', valueMap: [{ key: 'period', valueString: 'Avril' }, { key: 'trend', valueString: 'Arbitrage capacitaire entre selection et processing' }, { key: 'forecast', valueString: 'Reequilibrage des flux de lots strategiques' }]},
+                  { key: '4', valueMap: [{ key: 'period', valueString: 'Mai' }, { key: 'trend', valueString: 'Preparation des campagnes de lancement et des plans de stockage' }, { key: 'forecast', valueString: 'Pic d activite logistique a anticiper' }]},
+                  { key: '5', valueMap: [{ key: 'period', valueString: 'Juin' }, { key: 'trend', valueString: 'Demarrage des lots ete et du processing' }, { key: 'forecast', valueString: 'Forte tension sur les capacites de traitement' }]},
+                  { key: '6', valueMap: [{ key: 'period', valueString: 'Juillet' }, { key: 'trend', valueString: 'Pic de processing et de preparation export' }, { key: 'forecast', valueString: 'Maintien d un niveau eleve attendu' }]},
+                  { key: '7', valueMap: [{ key: 'period', valueString: 'Aout' }, { key: 'trend', valueString: 'Lissage post-pic et tri qualite' }, { key: 'forecast', valueString: 'Repli progressif des flux' }]},
+                  { key: '8', valueMap: [{ key: 'period', valueString: 'Septembre' }, { key: 'trend', valueString: 'Relance des plans de distribution export' }, { key: 'forecast', valueString: 'Hausse des commandes filieres elevage' }]},
+                  { key: '9', valueMap: [{ key: 'period', valueString: 'Octobre' }, { key: 'trend', valueString: 'Stabilisation des flux et plans commerciaux' }, { key: 'forecast', valueString: 'Activite soutenue sur HM.CLAUSE, Hazera et Vilmorin-Mikado' }]},
+                  { key: '10', valueMap: [{ key: 'period', valueString: 'Novembre' }, { key: 'trend', valueString: 'Preparation des campagnes d hiver' }, { key: 'forecast', valueString: 'Remontee des besoins varietaux et commerciaux' }]},
+                  { key: '11', valueMap: [{ key: 'period', valueString: 'Decembre' }, { key: 'trend', valueString: 'Consolidation annuelle et projections' }, { key: 'forecast', valueString: 'Redemarrage progressif en janvier' }]}
+                ]}
+              ]
+            },
             {
               key: 'industry',
               valueMap: [
                 { key: 'industryTable', valueMap: [
                   { key: '0', valueMap: [
-                    { key: 'name', valueString: 'Solar Manufacturing' },
-                    { key: 'productionIndex', valueNumber: 127.5 },
-                    { key: 'employment', valueNumber: 4520 },
-                    { key: 'growthRate', valueNumber: 15.2 },
-                    { key: 'outputValue', valueNumber: 2.8 },
-                    { key: 'efficiencyScore', valueNumber: 94.2 }
+                    { key: 'name', valueString: 'Selection varietale' },
+                    { key: 'productionIndex', valueNumber: 108.4 },
+                    { key: 'employment', valueNumber: 6400 },
+                    { key: 'growthRate', valueNumber: 4.2 },
+                    { key: 'outputValue', valueNumber: 1.3 },
+                    { key: 'efficiencyScore', valueNumber: 88 }
                   ]},
                   { key: '1', valueMap: [
-                    { key: 'name', valueString: 'Wind Turbine Production' },
-                    { key: 'productionIndex', valueNumber: 118.3 },
-                    { key: 'employment', valueNumber: 3280 },
-                    { key: 'growthRate', valueNumber: 12.8 },
-                    { key: 'outputValue', valueNumber: 1.9 },
-                    { key: 'efficiencyScore', valueNumber: 91.5 }
+                    { key: 'name', valueString: 'Semences' },
+                    { key: 'productionIndex', valueNumber: 104.9 },
+                    { key: 'employment', valueNumber: 850 },
+                    { key: 'growthRate', valueNumber: 8.9 },
+                    { key: 'outputValue', valueNumber: 0.4 },
+                    { key: 'efficiencyScore', valueNumber: 91 }
                   ]},
                   { key: '2', valueMap: [
-                    { key: 'name', valueString: 'Battery Storage' },
-                    { key: 'productionIndex', valueNumber: 145.2 },
-                    { key: 'employment', valueNumber: 2890 },
-                    { key: 'growthRate', valueNumber: 28.5 },
-                    { key: 'outputValue', valueNumber: 3.2 },
-                    { key: 'efficiencyScore', valueNumber: 88.7 }
+                    { key: 'name', valueString: 'Production semences' },
+                    { key: 'productionIndex', valueNumber: 101.7 },
+                    { key: 'employment', valueNumber: 2100 },
+                    { key: 'growthRate', valueNumber: 3.4 },
+                    { key: 'outputValue', valueNumber: 0.9 },
+                    { key: 'efficiencyScore', valueNumber: 94 }
                   ]},
                   { key: '3', valueMap: [
-                    { key: 'name', valueString: 'Grid Infrastructure' },
-                    { key: 'productionIndex', valueNumber: 105.8 },
-                    { key: 'employment', valueNumber: 8920 },
-                    { key: 'growthRate', valueNumber: 5.2 },
-                    { key: 'outputValue', valueNumber: 4.1 },
-                    { key: 'efficiencyScore', valueNumber: 96.3 }
-                  ]},
-                  { key: '4', valueMap: [
-                    { key: 'name', valueString: 'EV Charging Networks' },
-                    { key: 'productionIndex', valueNumber: 182.4 },
-                    { key: 'employment', valueNumber: 1560 },
-                    { key: 'growthRate', valueNumber: 42.1 },
-                    { key: 'outputValue', valueNumber: 1.2 },
-                    { key: 'efficiencyScore', valueNumber: 85.9 }
+                    { key: 'name', valueString: 'Processing et qualite' },
+                    { key: 'productionIndex', valueNumber: 112.3 },
+                    { key: 'employment', valueNumber: 3100 },
+                    { key: 'growthRate', valueNumber: 6.8 },
+                    { key: 'outputValue', valueNumber: 1.7 },
+                    { key: 'efficiencyScore', valueNumber: 84 }
                   ]}
                 ]}
               ]
@@ -715,16 +607,16 @@ export class StaticModule extends LitElement {
   // #region Render
   render() {
     return html`
-      <stat-bar .title=${"Traditional application"} .time=${""} .tokens=${""} .configUrl=${"/outage_config"} .configType=${"traditional"} .configData=${outageConfig}></stat-bar>
+      <stat-bar .title=${"Application traditionnelle LIMAGRAIN Vegetable Seeds"} .time=${""} .tokens=${""} .configUrl=${"/outage_config"} .configType=${"traditional"} .configData=${outageConfig}></stat-bar>
       <div class="tabs">
         <button class="btn btn-tab ${this.currentTab === 'summary' ? 'active' : ''}" @click=${() => this.switchTab('summary')}>
-          Energy Summary
+          Synthese operationnelle
         </button>
         <button class="btn btn-tab ${this.currentTab === 'details' ? 'active' : ''}" @click=${() => this.switchTab('details')}>
-          Outages Details
+          Details des alertes
         </button>
         <button class="btn btn-tab ${this.currentTab === 'map' ? 'active' : ''}" @click=${() => this.switchTab('map')}>
-          Outage Map
+          Carte des alertes
         </button>
       </div>
       <div class="tab-content">
@@ -764,32 +656,32 @@ export class StaticModule extends LitElement {
   private handleItemSelect(e: CustomEvent) {
     const detail = e.detail;
     this.selectedItem = detail.item;
-    this.showNotify(`Selected: ${detail.item?.id || detail.item?.label || 'item'}`);
+    this.showNotify(`Selection : ${detail.item?.id || detail.item?.label || 'element'}`);
   }
 
   private handleKpiClick(e: CustomEvent) {
     const detail = e.detail;
-    this.showNotify(`KPI clicked: ${detail.label} = ${detail.value}`);
+    this.showNotify(`Indicateur : ${detail.label} = ${detail.value}`);
   }
 
   private handleBarSelect(e: CustomEvent) {
     const { label, value, percentage } = e.detail;
-    this.showNotify(`Bar selected: ${label} - ${value} (${percentage}%)`);
+    this.showNotify(`Statut selectionne : ${label} - ${value} (${percentage}%)`);
   }
 
   private handlePointSelect(e: CustomEvent) {
     const { series, index, value, label } = e.detail;
-    this.showNotify(`Point selected: ${series} at ${label} = ${value}`);
+    this.showNotify(`Point selectionne : ${series} en ${label} = ${value}`);
   }
 
   private handleMarkerSelect(e: CustomEvent) {
     const marker = e.detail.marker;
-    this.showNotify(`Marker: ${marker.name} - ${marker.status || 'View details'}`);
+    this.showNotify(`Territoire : ${marker.name} - ${marker.status || 'Voir le detail'}`);
   }
 
   private handleTimelineAction(e: CustomEvent) {
     const { action, item } = e.detail;
-    this.showNotify(`${action} action on: ${item.title}`);
+    this.showNotify(`${action} sur : ${item.title}`);
   }
   // #endregion Interaction Handlers
 
@@ -814,10 +706,10 @@ export class StaticModule extends LitElement {
   private renderSummaryTab() {
     return html`
       <div class="chart-section">
-        <div class="section-title">Energy Consumption Overview</div>
+        <div class="section-title">Indicateurs operations et filieres</div>
         <kpi-card-group 
           .dataPath=${"/energyKPIs"} 
-          .title=${"Energy Metrics"} 
+          .title=${"Indicateurs semences potageres"} 
           .processor=${this.processor} 
           .component=${this}
           clickable
@@ -825,12 +717,12 @@ export class StaticModule extends LitElement {
         ></kpi-card-group>
       </div>
       <div class="bar-chart-section">
-        <div class="section-title">Outage Status Distribution</div>
+        <div class="section-title">Repartition des alertes par statut</div>
         <bar-graph
           .dataPath=${"/outageSummary"}
           .labelPath=${"/outageSummaryLabels"}
           .detailsPath=${"/outageSummaryDetails"}
-          .title=${"Outages by Status"}
+          .title=${"Alertes par statut"}
           .processor=${this.processor}
           .component=${this}
           interactive
@@ -839,19 +731,19 @@ export class StaticModule extends LitElement {
         ></bar-graph>
       </div>
       <div class="chart-section">
-        <div class="section-title">Energy Production Trends</div>
+        <div class="section-title">Tendances des campagnes et filieres</div>
         <line-graph 
           .seriesPath=${"/trends/energyTrend"} 
           .labelPath=${"/trends/energyTrendLabels"} 
           .detailsPath=${"/trends/energyTrendDetails"}
-          .title=${"Monthly Production by Source"} 
+          .title=${"Tendances mensuelles par activite"} 
           .processor=${this.processor} 
           .component=${this}
           interactive
           showPoints
           @point-select=${this.handlePointSelect}
         ></line-graph>
-        ${!this.hasEnergyTrends() ? html`<button @click=${this.loadEnergyTrends} class="btn btn-outline-traditional">Load Energy Trends</button>` : ''}
+        ${!this.hasEnergyTrends() ? html`<button @click=${this.loadEnergyTrends} class="btn btn-outline-traditional">Charger les tendances</button>` : ''}
       </div>
     `;
   }
@@ -859,19 +751,19 @@ export class StaticModule extends LitElement {
   private renderDetailsTab() {
     return html`
       <div class="table-section">
-        <div class="section-title">Outage Details by Location</div>
+        <div class="section-title">Alertes operationnelles par territoire</div>
         <data-table
           .dataPath=${"/outageTable"}
           .detailsPath=${"/outageTableDetails"}
-          .title=${"Outage Details"}
+          .title=${"Details des alertes"}
           .columns=${[
-            {header: "Outage ID", field: "id", type: "string"},
-            {header: "Location", field: "location", type: "string"},
-            {header: "Status", field: "status", type: "status"},
-            {header: "Severity", field: "severity", type: "severity"},
-            {header: "Start Time", field: "startTime", type: "date"},
-            {header: "Est. Restoration", field: "estimatedRestoration", type: "date"},
-            {header: "Affected", field: "affectedCustomers", type: "number"}
+            {header: "ID alerte", field: "id", type: "string"},
+            {header: "Territoire", field: "location", type: "string"},
+            {header: "Statut", field: "status", type: "status"},
+            {header: "Priorite", field: "severity", type: "severity"},
+            {header: "Ouverture", field: "startTime", type: "date"},
+            {header: "Retour au nominal", field: "estimatedRestoration", type: "date"},
+            {header: "Impact", field: "affectedCustomers", type: "number"}
           ]}
           .processor=${this.processor}
           .component=${this}
@@ -881,7 +773,7 @@ export class StaticModule extends LitElement {
         ></data-table>
       </div>
       <div class="timeline-section">
-        <div class="section-title">Outage Timeline</div>
+        <div class="section-title">Chronologie des alertes et actions</div>
         <timeline-component 
           .dataPath=${"/timeline/timelineEvents"} 
           .detailsPath=${"/timeline/timelineEventDetails"}
@@ -890,27 +782,27 @@ export class StaticModule extends LitElement {
           expandable
           @timeline-action=${this.handleTimelineAction}
         ></timeline-component>
-        ${!this.hasTimeline() ? html`<button @click=${this.loadTimeline} class="btn btn-outline-traditional">Load Timeline</button>` : ''}
+        ${!this.hasTimeline() ? html`<button @click=${this.loadTimeline} class="btn btn-outline-traditional">Charger la chronologie</button>` : ''}
       </div>
       <div class="table-section">
-        <div class="section-title">Industry Performance Metrics</div>
+        <div class="section-title">Performance des filieres</div>
         <data-table
           .dataPath=${"/industry/industryTable"}
           .detailsPath=${"/industry/industryTableDetails"}
-          .title=${"Industry Data"}
+          .title=${"Indicateurs filieres"}
           .columns=${[
-            {header: "Industry", field: "name", type: "string"},
-            {header: "Production Index", field: "productionIndex", type: "number"},
-            {header: "Employment", field: "employment", type: "number"},
-            {header: "Growth Rate", field: "growthRate", type: "number"},
-            {header: "Output Value", field: "outputValue", type: "number"},
-            {header: "Efficiency Score", field: "efficiencyScore", type: "number"}
+            {header: "Filiere", field: "name", type: "string"},
+            {header: "Indice activite", field: "productionIndex", type: "number"},
+            {header: "Exploitations / emplois", field: "employment", type: "number"},
+            {header: "Croissance", field: "growthRate", type: "number"},
+            {header: "Valeur", field: "outputValue", type: "number"},
+            {header: "Score maitrise", field: "efficiencyScore", type: "number"}
           ]}
           .processor=${this.processor}
           .component=${this}
           expandable
         ></data-table>
-        ${!this.hasIndustry() ? html`<button @click=${this.loadIndustryData} class="btn btn-outline-traditional">Load Industry Data</button>` : ''}
+        ${!this.hasIndustry() ? html`<button @click=${this.loadIndustryData} class="btn btn-outline-traditional">Charger les filieres</button>` : ''}
       </div>
     `;
   }
@@ -918,12 +810,12 @@ export class StaticModule extends LitElement {
   private renderMapTab() {
     return html`
       <div class="map-section">
-        <div class="section-title">Outage Locations</div>
+        <div class="section-title">Localisation des alertes</div>
         <map-component 
           .dataPath=${"/mapMarkers"} 
-          .centerLat=${40.76} 
-          .centerLng=${-73.98} 
-          .zoom=${12} 
+          .centerLat=${47.35} 
+          .centerLng=${-1.1} 
+          .zoom=${8} 
           .processor=${this.processor} 
           .component=${this}
           interactive
@@ -931,8 +823,8 @@ export class StaticModule extends LitElement {
           @marker-select=${this.handleMarkerSelect}
         ></map-component>
         <div class="map-description">
-          <p>This map shows the current locations of reported power outages in the service area. Click markers for details or use the info panel to navigate between locations.</p>
-          <p>Colors indicate severity: <strong style="color: #FF6B6B;">Red = High</strong>, <strong style="color: #FFB347;">Orange = Medium</strong>, <strong style="color: #4ECDC4;">Green = Resolved</strong></p>
+          <p>Cette carte presente les alertes operationnelles LIMAGRAIN Vegetable Seeds. Cliquez sur un marqueur pour afficher le contexte metier, les impacts et l equipe mobilisee.</p>
+          <p>Les couleurs representent le niveau de priorite : <strong style="color: #FF6B6B;">Rouge = critique / elevee</strong>, <strong style="color: #FFB347;">Orange = moyenne</strong>, <strong style="color: #4ECDC4;">Vert = resolue ou maitrisee</strong></p>
         </div>
       </div>
     `;

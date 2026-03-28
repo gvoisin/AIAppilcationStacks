@@ -33,6 +33,7 @@ DB_WALLET_PATH=<absolute-path-to-wallet>
 DB_WALLET_PASSWORD=<wallet-password>
 DB_USER=<db-user>
 DB_DSN=<db-dsn>
+LOG_LEVEL=INFO
 ```
 
 ## Install Dependencies
@@ -40,6 +41,32 @@ DB_DSN=<db-dsn>
 ```bash
 uv sync
 ```
+
+## Logging and External Call Tracing
+
+The server supports a `LOG_LEVEL` environment variable loaded from `.env`:
+
+```env
+LOG_LEVEL=INFO
+```
+
+Use `LOG_LEVEL=DEBUG` to enable detailed tracing of outbound external calls. In DEBUG mode, the server logs request/response traces for the main shared integration points:
+
+- OCI GenAI chat/model HTTP calls
+- OCI embedding calls
+- Oracle DB SQL calls
+- Oracle property graph checks
+- RAG query DB calls
+- outbound async HTTP push calls used by the A2A push sender
+
+The DEBUG logs include:
+
+- external target / URL
+- request payloads
+- response payloads or summarized response previews
+- traced errors
+
+Sensitive values such as auth headers, API keys, passwords, cookies, and tokens are redacted before logging.
 
 ## Run the Server
 

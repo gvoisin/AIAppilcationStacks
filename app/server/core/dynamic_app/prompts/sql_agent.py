@@ -6,99 +6,154 @@ import textwrap
 SQL_SCHEMA_DESCRIPTION = textwrap.dedent(
     """
     You are an expert Oracle SQL generator. The user asks questions about
-    the power grid database schema which contains:
+    the LIMAGRAIN Vegetable Seeds operations database schema which contains:
 
-      • SUBSTATIONS(id, name, code, latitude, longitude, capacity_mva, status)
-      • CIRCUITS(id, circuit_name, circuit_code, substation_id, voltage_kv, customers_served, avg_load_mw, peak_load_mw, neighborhood)
-      • ASSETS(id, asset_id, asset_type, circuit_id, substation_id, condition_score, health_index, status, criticality)
-      • CUSTOMERS(id, account_number, name, customer_type, circuit_id, avg_monthly_usage_kwh, peak_demand_kw, sla_priority)
-      • OUTAGES(id, incident_code, circuit_id, root_cause_asset_id, start_time, end_time, cause_category, customers_affected, duration_minutes)
-      • WORK_ORDERS(id, outage_id, asset_id, work_type, priority, status, labor_hours, material_cost)
-      • DOCUMENTS(id, document_type, title, related_outage_id, related_asset_id, related_circuit_id, tags, author, document_date)
-      • CREW_ASSIGNMENTS(crew_id, outage_id, dispatch_time, arrival_time)
-      • CUSTOMER_COMPLAINTS(id, customer_id, outage_id, category, status, complaint_time, resolution)
-      • ASSET_HEALTH_HISTORY(asset_id, reading_time, condition_score, temperature_c, load_pct)
+      • territories(territory_id, territory_name, territory_code, region_name, risk_level, logistics_pressure_score, notes)
+      • filieres(filiere_id, filiere_name, filiere_code, category, strategic_priority, active_flag)
+      • brands(brand_id, brand_name, brand_code, business_line, export_flag, quality_sensitivity)
+      • campaigns(campaign_id, campaign_name, campaign_year, season_name, start_date, end_date, status)
+      • sites(site_id, site_name, site_code, site_type, territory_id, filiere_id, city_name, capacity_tons, status)
+      • brand_filieres(brand_id, filiere_id, importance_level)
+      • brand_sites(brand_id, site_id, role_name)
+      • operational_alerts(alert_id, alert_code, alert_title, alert_type, severity, status, filiere_id, territory_id, site_id, campaign_id, opened_at, expected_resolution_at, impact_summary, impact_units, impact_unit_label, cause_summary, assigned_team, escalation_required)
+      • alert_brand_impacts(alert_id, brand_id, impact_level, impact_description)
+      • logistics_flows(flow_id, flow_code, flow_name, filiere_id, brand_id, origin_site_id, destination_site_id, campaign_id, transport_mode, service_level_pct, on_time_delivery_pct, backlog_tons, weekly_volume_tons, weather_risk_level, flow_status, notes)
+      • lots(lot_id, lot_code, filiere_id, brand_id, source_site_id, current_site_id, campaign_id, production_date, expiration_date, quantity, quantity_unit, traceability_status, quality_status, destination_market, export_flag)
+      • quality_issues(quality_issue_id, issue_code, lot_id, site_id, brand_id, issue_category, severity, status, detected_at, owner_name, summary, action_required)
+      • traceability_checks(check_id, lot_id, site_id, check_date, check_status, indicator_name, indicator_value, threshold_value, unit_label, finding_summary, document_complete_flag)
+      • reference_documents(document_id, document_code, document_title, document_type, related_filiere_id, related_brand_id, related_lot_id, related_alert_id, version_label, owner_name, document_status, created_at)
+      • action_plans(action_plan_id, action_code, alert_id, brand_id, site_id, owner_name, priority, due_at, status, action_summary, horizon_hours)
 
     Key Relationships:
-      CIRCUITS.substation_id = SUBSTATIONS.id
-      ASSETS.circuit_id = CIRCUITS.id
-      ASSETS.substation_id = SUBSTATIONS.id
-      CUSTOMERS.circuit_id = CIRCUITS.id
-      OUTAGES.circuit_id = CIRCUITS.id
-      OUTAGES.root_cause_asset_id = ASSETS.id
-      WORK_ORDERS.outage_id = OUTAGES.id
-      WORK_ORDERS.asset_id = ASSETS.id
-      DOCUMENTS.related_outage_id = OUTAGES.id
-      DOCUMENTS.related_asset_id = ASSETS.id
-      DOCUMENTS.related_circuit_id = CIRCUITS.id
-      CREW_ASSIGNMENTS.outage_id = OUTAGES.id
-      CUSTOMER_COMPLAINTS.customer_id = CUSTOMERS.id
-      CUSTOMER_COMPLAINTS.outage_id = OUTAGES.id
-      ASSET_HEALTH_HISTORY.asset_id = ASSETS.id
+      sites.territory_id = territories.territory_id
+      sites.filiere_id = filieres.filiere_id
+      brand_filieres.brand_id = brands.brand_id
+      brand_filieres.filiere_id = filieres.filiere_id
+      brand_sites.brand_id = brands.brand_id
+      brand_sites.site_id = sites.site_id
+      operational_alerts.filiere_id = filieres.filiere_id
+      operational_alerts.territory_id = territories.territory_id
+      operational_alerts.site_id = sites.site_id
+      operational_alerts.campaign_id = campaigns.campaign_id
+      alert_brand_impacts.alert_id = operational_alerts.alert_id
+      alert_brand_impacts.brand_id = brands.brand_id
+      logistics_flows.filiere_id = filieres.filiere_id
+      logistics_flows.brand_id = brands.brand_id
+      logistics_flows.origin_site_id = sites.site_id
+      logistics_flows.destination_site_id = sites.site_id
+      logistics_flows.campaign_id = campaigns.campaign_id
+      lots.filiere_id = filieres.filiere_id
+      lots.brand_id = brands.brand_id
+      lots.source_site_id = sites.site_id
+      lots.current_site_id = sites.site_id
+      lots.campaign_id = campaigns.campaign_id
+      quality_issues.lot_id = lots.lot_id
+      quality_issues.site_id = sites.site_id
+      quality_issues.brand_id = brands.brand_id
+      traceability_checks.lot_id = lots.lot_id
+      traceability_checks.site_id = sites.site_id
+      reference_documents.related_filiere_id = filieres.filiere_id
+      reference_documents.related_brand_id = brands.brand_id
+      reference_documents.related_lot_id = lots.lot_id
+      reference_documents.related_alert_id = operational_alerts.alert_id
+      action_plans.alert_id = operational_alerts.alert_id
+      action_plans.brand_id = brands.brand_id
+      action_plans.site_id = sites.site_id
 
-    The examples below are for reference only - they demonstrate general SQL patterns.
-    The actual database schema and data is provided above on DB description.
+    The schema supports LIMAGRAIN Vegetable Seeds business questions about semences potageres,
+    la logistique, la qualite, la tracabilite, les lots, les sites,
+    les campagnes, les marques et les alertes operationnelles.
 
     Return valid SQL only. Your output will be directly fed to the oracle database.
     dont include backquotes as they would interfere
     Always limit your queries to the first top 10 rows of the results and consider this in the information retrieval.
+    When the user asks for the most important, most priority, top, or highest-priority alerts,
+    do not filter severity to only one level unless the user explicitly asks for a specific severity.
+    Instead rank severities with CRITICAL first, then HIGH, then MEDIUM, then LOW.
+    For time-sensitive phrases like ce matin, aujourd hui, or recent, prefer filtering on opened_at
+    while still preserving severity ranking rather than excluding CRITICAL alerts.
     """
 )
 
 SQL_FEW_SHOT_EXAMPLES = [
     {
-        "q": "How many employees are there?",
-        "sql": "SELECT COUNT(*) AS employee_count FROM employees;",
-    },
-    {
-        "q": "List all employees with their departments",
+        "q": "Quelles sont les alertes operationnelles les plus prioritaires ?",
         "sql": (
-            "SELECT e.first_name, e.last_name, d.department_name, e.salary\n"
-            "FROM employees e\n"
-            "JOIN departments d ON e.department_id = d.id\n"
-            "ORDER BY d.department_name, e.last_name;"
+            "SELECT alert_code, alert_title, severity, status, opened_at\n"
+            "FROM operational_alerts\n"
+            "ORDER BY CASE severity\n"
+            "           WHEN 'CRITICAL' THEN 1\n"
+            "           WHEN 'HIGH' THEN 2\n"
+            "           WHEN 'MEDIUM' THEN 3\n"
+            "           ELSE 4\n"
+            "         END, opened_at DESC\n"
+            "FETCH FIRST 10 ROWS ONLY;"
         ),
     },
     {
-        "q": "Products by category and their average price",
+        "q": "Quels territoires menacent HM.CLAUSE ou Hazera ?",
         "sql": (
-            "SELECT category, COUNT(*) AS product_count, AVG(price) AS avg_price\n"
-            "FROM products\n"
-            "GROUP BY category\n"
-            "ORDER BY product_count DESC;"
+            "SELECT b.brand_name, t.territory_name, oa.alert_title, abi.impact_level\n"
+            "FROM alert_brand_impacts abi\n"
+            "JOIN brands b ON b.brand_id = abi.brand_id\n"
+            "JOIN operational_alerts oa ON oa.alert_id = abi.alert_id\n"
+            "LEFT JOIN territories t ON t.territory_id = oa.territory_id\n"
+            "WHERE b.brand_name IN ('HM.CLAUSE', 'Hazera')\n"
+            "ORDER BY abi.impact_level DESC, oa.opened_at DESC\n"
+            "FETCH FIRST 10 ROWS ONLY;"
         ),
     },
     {
-        "q": "Find all customers who placed orders in the last 30 days",
+        "q": "Compare la performance logistique entre la production et la distribution commerciale des semences potageres",
         "sql": (
-            "SELECT DISTINCT c.first_name, c.last_name, o.order_number, o.order_date, o.total_amount\n"
-            "FROM customers c\n"
-            "JOIN orders o ON c.id = o.customer_id\n"
-            "WHERE o.order_date >= SYSDATE - 30\n"
-            "ORDER BY o.order_date DESC;"
+            "SELECT f.filiere_name,\n"
+            "       ROUND(AVG(lf.service_level_pct), 2) AS avg_service_level_pct,\n"
+            "       ROUND(AVG(lf.on_time_delivery_pct), 2) AS avg_on_time_delivery_pct,\n"
+            "       ROUND(SUM(lf.backlog_tons), 2) AS total_backlog_tons\n"
+            "FROM logistics_flows lf\n"
+            "JOIN filieres f ON f.filiere_id = lf.filiere_id\n"
+            "WHERE f.filiere_code IN ('VEG_PRODUCTION', 'VEG_DISTRIBUTION')\n"
+            "GROUP BY f.filiere_name\n"
+            "ORDER BY avg_service_level_pct DESC\n"
+            "FETCH FIRST 10 ROWS ONLY;"
         ),
     },
     {
-        "q": "Customer order analysis with frequency and totals",
+        "q": "Quels indicateurs montrent un risque sur la tracabilite ?",
         "sql": (
-            "SELECT c.first_name, c.last_name, c.membership_level,\n"
-            "       COUNT(o.id) AS order_count,\n"
-            "       AVG(o.total_amount) AS avg_order_amount,\n"
-            "       SUM(o.total_amount) AS total_spent\n"
-            "FROM customers c\n"
-            "LEFT JOIN orders o ON c.id = o.customer_id\n"
-            "GROUP BY c.id, c.first_name, c.last_name, c.membership_level\n"
-            "ORDER BY total_spent DESC, order_count DESC;"
+            "SELECT l.lot_code, tc.check_date, tc.indicator_name, tc.check_status, tc.finding_summary\n"
+            "FROM traceability_checks tc\n"
+            "JOIN lots l ON l.lot_id = tc.lot_id\n"
+            "WHERE tc.check_status IN ('WARNING', 'FAIL')\n"
+            "   OR tc.document_complete_flag = 'N'\n"
+            "ORDER BY tc.check_date DESC\n"
+            "FETCH FIRST 10 ROWS ONLY;"
         ),
     },
     {
-        "q": "Product sales trends (latest sales data per product)",
+        "q": "Quels sujets doivent etre remontes a un responsable qualite pour HM.CLAUSE ?",
         "sql": (
-            "SELECT p.product_name, p.category, s.sales_amount, s.units_sold, s.sales_date\n"
-            "FROM products p\n"
-            "JOIN sales_history s ON p.id = s.product_id\n"
-            "WHERE s.sales_date = (SELECT MAX(sales_date) FROM sales_history WHERE product_id = p.id)\n"
-            "ORDER BY s.sales_amount DESC;"
+            "SELECT qi.issue_code, qi.issue_category, qi.severity, qi.status, qi.summary\n"
+            "FROM quality_issues qi\n"
+            "JOIN brands b ON b.brand_id = qi.brand_id\n"
+            "WHERE b.brand_name = 'HM.CLAUSE'\n"
+            "  AND qi.status IN ('OPEN', 'UNDER_REVIEW', 'ESCALATED')\n"
+            "ORDER BY qi.detected_at DESC\n"
+            "FETCH FIRST 10 ROWS ONLY;"
+        ),
+    },
+    {
+        "q": "Quels lots export Vilmorin-Mikado sont a risque ?",
+        "sql": (
+            "SELECT l.lot_code, l.traceability_status, l.quality_status, qi.status AS quality_issue_status\n"
+            "FROM lots l\n"
+            "LEFT JOIN quality_issues qi ON qi.lot_id = l.lot_id\n"
+            "JOIN brands b ON b.brand_id = l.brand_id\n"
+            "WHERE b.brand_name = 'Vilmorin-Mikado'\n"
+            "  AND (l.traceability_status IN ('AT_RISK', 'BLOCKED', 'WATCH')\n"
+            "       OR qi.status IN ('OPEN', 'UNDER_REVIEW', 'ESCALATED'))\n"
+            "ORDER BY l.traceability_status DESC\n"
+            "FETCH FIRST 10 ROWS ONLY;"
         ),
     },
 ]

@@ -50,8 +50,8 @@ def extract_RAG_sources(semantic_result: str) -> list[str]:
 
 
 #region Main Agent
-class OCIOutageEnergyLLM:
-    """LLM agent that handles outage and energy requests."""
+class OCILimagrainLLM:
+    """Agent conversationnel LIMAGRAIN Vegetable Seeds pour les demandes filieres et operations."""
 
     SUPPORTED_CONTENT_TYPES = ["text", "text/plain", "text/event-stream"]
 
@@ -65,14 +65,14 @@ class OCIOutageEnergyLLM:
         self.langfuse_tracing_provider = LangfuseTracingProvider(langfuse_client=langfuse_client)
 
     def _build_agent(self) -> CompiledStateGraph:
-        """Builds the LLM agent for the outage and energy agent."""
+        """Construit l agent conversationnel LIMAGRAIN Vegetable Seeds."""
         oci_llm = GenAIProvider().build_oci_client(model_kwargs={"temperature":0.7})
 
         return create_agent(
             model=oci_llm,
             tools=[semantic_search, call_SQL_DB],
             system_prompt=MAIN_LLM_INSTRUCTIONS,
-            name="outage_energy_llm",
+            name="assistant_limagrain_llm",
             checkpointer= InMemorySaver()
         )
 
@@ -84,8 +84,8 @@ class OCIOutageEnergyLLM:
         if not suggestions:
             suggestions = SuggestedQuestions(
                 suggested_questions=[
-                    "Tell me more details about first data",
-                    "Make a summary of data given",
+                    "Quels territoires menacent HM.CLAUSE ou Hazera ?",
+                    "Resume les risques du moment pour les marques Limagrain Vegetable Seeds",
                 ]
             )
         return suggestions
@@ -108,7 +108,7 @@ class OCIOutageEnergyLLM:
 
         with self.langfuse_client.start_as_current_observation(
             as_type="span",
-            name="OutageEnergyLLM -> Agent Stream",
+            name="LimagrainLLM -> Agent Stream",
             input={"query": query},
             metadata=self.langfuse_tracing_provider.build_observation_metadata(
                 session_id=stable_session_id,

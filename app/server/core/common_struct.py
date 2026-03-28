@@ -6,7 +6,7 @@ from core.gen_ai_provider import GenAIProvider
 # region Models
 class SuggestedQuestions(BaseModel):
     """Structured output with suggested follow-up questions."""
-    suggested_questions: list[str] = Field(description="List of suggested questions based on context")
+    suggested_questions: list[str] = Field(description="Liste de questions de suivi basees sur le contexte")
 
 class SuggestionModel:
     def build_suggestion_model(self):
@@ -16,10 +16,9 @@ class SuggestionModel:
 
 # region Prompt
 SUGGESTION_QUERY = """
-Based on the given context, generate a list of at least 1-3 suggested follow up questions that the user might want to ask next.
-These should be relevant to the information provided and help the user explore the topic further.
-Always provide suggestions, even if the information is limited.
-Consider questions will be shown in UI, in buttons, so build them short or clean to show good on UI.
-Do not make questions related to UI, or the structure, just the raw data that is presented.
+A partir du contexte fourni, genere entre 1 et 3 questions de suivi pertinentes.
+Les questions doivent etre courtes, claires, affichables dans des boutons d interface et toujours en francais.
+Elles doivent porter uniquement sur les donnees metier presentes: filieres, logistique, qualite, tracabilite, campagnes, production agricole, adherence cooperative, risques operationnels.
+N ecris pas de question sur l interface elle-meme.
 """
 # endregion Prompt

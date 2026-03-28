@@ -20,7 +20,7 @@ class SuggestionsReponseLLM:
 
     def __init__(self):
         self._suggestion_out = self._build_suggestion_model()
-        self._out_query = "Based on the given context, generate a list of at least 1-3 suggested follow up questions that the user might want to ask next. These should be relevant to the information provided and help the user explore the topic further. Always provide suggestions, even if the information is limited. Consider questions will be shown in UI, in buttons, so build them short or clean to show good on UI."
+        self._out_query = "A partir du contexte fourni, genere 1 a 3 questions de suivi courtes, claires et en francais. Elles doivent etre affichables dans des boutons UI et porter sur les marques, filieres, sites, qualite, logistique, tracabilite, export ou risques LIMAGRAIN Vegetable Seeds."
 
     def _build_suggestion_model(self):
         genai_provider = GenAIProvider()
@@ -31,7 +31,7 @@ class SuggestionsReponseLLM:
     async def __call__(self, state: DynamicGraphState) -> DynamicGraphState:
         suggestions = await self._suggestion_out.ainvoke(self._out_query+f"\n\nContext for question generation:\n{state['messages'][-1].content}")
 
-        if not suggestions: suggestions = SuggestedQuestions(suggested_questions=["Tell me more details about first data", "Make a summary of data given"])
+        if not suggestions: suggestions = SuggestedQuestions(suggested_questions=["Quels risques concernent HM.CLAUSE ?", "Resume les priorites pour Hazera"])
 
         return {
             'messages': state['messages'] + [
@@ -50,8 +50,9 @@ class UIOrchestrator:
 
     def __init__(self):
         self.gen_ai_provider = GenAIProvider()
-        self._client = self.gen_ai_provider.build_oci_client(model_id="openai.gpt-4.1",model_kwargs={"temperature":0.7})
-        self._output_client = self.gen_ai_provider.build_oci_client(model_id="openai.gpt-4.1",model_kwargs={"temperature":0.7})
+        self._ui_model_id = os.getenv("UI_ORCHESTRATOR_MODEL", "openai.gpt-4.1")
+        self._client = self.gen_ai_provider.build_oci_client(model_id=self._ui_model_id, model_kwargs={"temperature": 0.7})
+        self._output_client = self.gen_ai_provider.build_oci_client(model_id=self._ui_model_id, model_kwargs={"temperature": 0.7})
         self.agent_name = "ui_orchestrator"
         self.agent = self._build_agent()
         self.output_response = self._build_output_llm()

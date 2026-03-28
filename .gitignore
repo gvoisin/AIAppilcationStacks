@@ -16,3 +16,5 @@ __pycache__
 
 ## local files
 scratch/**
+app/server/wallet/**
+logs/**

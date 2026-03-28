@@ -10,6 +10,14 @@ import "./status_drawer.js"
 import { chatConfig } from "../configs/chat_config.js"
 import { designTokensCSS, colors, radius } from "../theme/design-tokens.js"
 
+const INITIAL_TERRANA_SUGGESTIONS = JSON.stringify({
+  suggested_questions: [
+    "Quels incidents pourraient impacter HM.CLAUSE cette semaine ?",
+    "Y a t il un risque pour les expeditions Vilmorin-Mikado vers l APAC ?",
+    "Resume les priorites pour Hazera",
+  ],
+});
+
 // #region Component
 @customElement("chat-module")
 export class ChatModule extends LitElement {
@@ -35,7 +43,7 @@ export class ChatModule extends LitElement {
   accessor tokenCount = ''
 
   @state()
-  accessor suggestions = ""
+  accessor suggestions = INITIAL_TERRANA_SUGGESTIONS
 
   @state()
   accessor #pendingResponse = false
@@ -305,7 +313,7 @@ export class ChatModule extends LitElement {
 
     console.log("Sending suggestion as query:", suggestion);
     try {
-      this.suggestions = "";
+      this.suggestions = INITIAL_TERRANA_SUGGESTIONS;
       this.router.sendTextMessage(this.defaultServerUrl, suggestion.trim());
     } catch (error) {
       console.error("Failed to send suggestion:", error);
@@ -373,7 +381,7 @@ export class ChatModule extends LitElement {
     }
 
     .message-role {
-      font-size: var(--font-size-xs);
+      font-size: 0.72rem;
       opacity: 0.7;
       margin-bottom: var(--space-xs);
       text-transform: uppercase;
@@ -395,7 +403,7 @@ export class ChatModule extends LitElement {
       margin-top: var(--space-sm);
       padding-top: var(--space-sm);
       border-top: 1px solid var(--border-secondary);
-      font-size: var(--font-size-xs);
+      font-size: 0.72rem;
       color: var(--text-secondary);
       line-height: 1.5;
     }
@@ -478,7 +486,7 @@ export class ChatModule extends LitElement {
     .status-item {
       padding: var(--space-xs) 0;
       border-bottom: 1px solid var(--border-secondary);
-      font-size: var(--font-size-xs);
+      font-size: 0.72rem;
       line-height: 1.4;
       display: flex;
       gap: var(--space-sm);
@@ -585,7 +593,7 @@ export class ChatModule extends LitElement {
       ></stat-bar>
       <div class="chat-messages">
         ${this.messages.length === 0 ? html`
-          <div class="empty-chat">Start a conversation by typing a message below...</div>
+          <div class="empty-chat">Posez une question sur HM.CLAUSE, Hazera, Vilmorin-Mikado ou Limagrain Vegetable Seeds...</div>
         ` : ''}
         ${repeat(
           this.messages,

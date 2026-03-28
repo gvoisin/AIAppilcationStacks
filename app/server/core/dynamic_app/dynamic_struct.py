@@ -67,21 +67,18 @@ DEFAULT_CONFIG = {
             model="xai.grok-4-fast-non-reasoning",
             temperature=0.7,
             name="data_orchestrator_agent",
-            system_prompt="""You are an agent specialized in orchestrating data retrieval for energy and outage information.
-            Based on user queries about power outages, energy statistics, and industry performance, determine what data is needed.
-            Return your answer in the best way possible so other LLMs can read the information and proceed.
-            Only return the types of data needed: outage_data, energy_data, or industry_data.""",
+            system_prompt="""Tu es un agent specialise dans l orchestration des donnees LIMAGRAIN Vegetable Seeds.
+            A partir des questions sur filieres, logistique, qualite, tracabilite, campagnes et alertes operationnelles, determine quelles donnees doivent etre recuperes.
+            Retourne une synthese exploitable par d autres agents.""",
             tools_enabled=["get_outage_data", "get_energy_data", "get_industry_data"]
         ),
         "data_analyzer_agent": AgentConfig(
             model="xai.grok-4-fast-non-reasoning",
             temperature=0.7,
             name="data_analyzer_agent",
-            system_prompt="""You are an agent expert in analyzing energy and outage data.
-            You will receive information about power outages, energy statistics, and industry performance data.
-            Your job is to analyze this data and provide insights, trends, and relevant information to help users understand the energy landscape.
-            Important, consider including relevant metrics, trends, and UI data to be rendered during next steps.
-            Ensure data analysis is accurate and comprehensive, using tools as required according to context.""",
+            system_prompt="""Tu es un agent expert en analyse de donnees LIMAGRAIN Vegetable Seeds.
+            Tu recois des informations sur les filieres, la logistique, la qualite, la tracabilite, les campagnes et les alertes operationnelles.
+            Ton role est d en tirer des insights, tendances, priorites et elements directement exploitables dans une interface dynamique.""",
             tools_enabled=["get_outage_data", "get_energy_data", "get_industry_data"]
         ),
         "ui_presenter_agent": AgentConfig(

@@ -16,7 +16,7 @@ interface OutageRecord {
 @customElement('outage-table')
 export class OutageTable extends Root {
   @property({ attribute: false }) accessor dataPath: any = "";
-  @property({ attribute: false }) accessor title: string = "Outage Information";
+  @property({ attribute: false }) accessor title: string = "Informations alertes";
   @property({ attribute: false }) accessor showPagination: boolean = false;
   @property({ attribute: false }) accessor pageSize: number = 10;
 
@@ -283,7 +283,7 @@ export class OutageTable extends Root {
       return html`
         <div class="table-container">
           <div class="table-title">${this.title}</div>
-          <div class="empty-state">No outage data available</div>
+          <div class="empty-state">Aucune alerte disponible</div>
         </div>
       `;
     }
@@ -295,13 +295,13 @@ export class OutageTable extends Root {
           <table>
             <thead>
               <tr>
-                <th>Outage ID</th>
-                <th>Location</th>
-                <th>Status</th>
-                <th>Severity</th>
-                <th>Start Time</th>
-                <th>Est. Restoration</th>
-                <th>Affected</th>
+                <th>ID alerte</th>
+                <th>Territoire</th>
+                <th>Statut</th>
+                <th>Priorite</th>
+                <th>Ouverture</th>
+                <th>Retour au nominal</th>
+                <th>Impact</th>
               </tr>
             </thead>
             <tbody>
@@ -310,7 +310,7 @@ export class OutageTable extends Root {
           </table>
         </div>
         <div class="table-footer">
-          <span class="record-count">${outageData.length} outage${outageData.length !== 1 ? 's' : ''} total</span>
+          <span class="record-count">${outageData.length} alerte${outageData.length !== 1 ? 's' : ''} au total</span>
         </div>
       </div>
     `;
@@ -348,19 +348,19 @@ export class OutageTable extends Root {
 
   private getStatusClass(status: string): string {
     const normalized = status.toLowerCase();
-    if (normalized.includes('active') || normalized.includes('ongoing')) return 'status-active';
-    if (normalized.includes('investigating') || normalized.includes('pending')) return 'status-investigating';
-    if (normalized.includes('resolved') || normalized.includes('completed')) return 'status-resolved';
-    if (normalized.includes('scheduled') || normalized.includes('planned')) return 'status-scheduled';
+    if (normalized.includes('ouverte') || normalized.includes('ongoing')) return 'status-active';
+    if (normalized.includes('analyse') || normalized.includes('pending')) return 'status-investigating';
+    if (normalized.includes('resolue') || normalized.includes('completed')) return 'status-resolved';
+    if (normalized.includes('planifiee') || normalized.includes('planned') || normalized.includes('surveillance')) return 'status-scheduled';
     return 'status-active';
   }
 
   private getSeverityClass(severity: string): string {
     const normalized = severity.toLowerCase();
-    if (normalized.includes('critical')) return 'severity-critical';
-    if (normalized.includes('high')) return 'severity-high';
-    if (normalized.includes('medium') || normalized.includes('moderate')) return 'severity-medium';
-    if (normalized.includes('low') || normalized.includes('minor')) return 'severity-low';
+    if (normalized.includes('critique')) return 'severity-critical';
+    if (normalized.includes('elevee')) return 'severity-high';
+    if (normalized.includes('moyenne') || normalized.includes('moderate')) return 'severity-medium';
+    if (normalized.includes('faible') || normalized.includes('minor')) return 'severity-low';
     return 'severity-medium';
   }
 
@@ -368,7 +368,7 @@ export class OutageTable extends Root {
     if (!dateStr) return '—';
     try {
       const date = new Date(dateStr);
-      return date.toLocaleString('en-US', {
+      return date.toLocaleString('fr-FR', {
         month: 'short',
         day: 'numeric',
         hour: '2-digit',

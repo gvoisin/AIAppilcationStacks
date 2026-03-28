@@ -138,17 +138,17 @@ export class ChatInput extends LitElement {
           .value=${this.#inputValue}
           @input=${(e: Event) => (this.#inputValue = (e.target as HTMLInputElement).value)}
           @keypress=${this.handleKeyPress}
-          placeholder="Show me latest outage zones..."
+          placeholder="Ex: Quels incidents pourraient impacter HM.CLAUSE ou Hazera cette semaine ?"
         />
         <div class="send-buttons">
-          <button class="btn btn-outline-chat" @click=${this.handleSubmitLLM} title="Send to Chat Module">
-            Send to Chat
+          <button class="btn btn-outline-chat" @click=${this.handleSubmitLLM} title="Envoyer au module Chat">
+            Envoyer au Chat
           </button>
-          <button class="btn btn-secondary" @click=${this.handleSubmit} title="Send to Both Modules">
-            Send to Both
+          <button class="btn btn-secondary" @click=${this.handleSubmit} title="Envoyer aux deux modules">
+            Envoyer aux deux
           </button>
-          <button class="btn btn-outline-agent" @click=${this.handleSubmitAgent} title="Send to Agent Module">
-            Send to Agent
+          <button class="btn btn-outline-agent" @click=${this.handleSubmitAgent} title="Envoyer au module Agent">
+            Envoyer a l Agent
           </button>
         </div>
       </div>

@@ -310,7 +310,7 @@ class DynamicGraph:
             fall_back_suggestions_model = SuggestionModel().build_suggestion_model()
             raw_suggestions = await fall_back_suggestions_model.ainvoke(self._out_query+f"\n\nContext for question generation:\n{final_response_content}")
             if not raw_suggestions:
-                raw_suggestions = SuggestedQuestions(suggested_questions=["Tell me more details about first data", "Make a summary of data given"])
+                raw_suggestions = SuggestedQuestions(suggested_questions=["Quels risques concernent HM.CLAUSE ?", "Resume les priorites pour Hazera"])
             suggestions = raw_suggestions.model_dump_json()
 
             final_payload = {
@@ -342,7 +342,7 @@ async def main():
 
     await graph.build_graph()
 
-    async for event in graph.call_dynamic_ui_graph("Show me a dashboard with some charts and graphs about energy usage", "1234"):
+    async for event in graph.call_dynamic_ui_graph("Construis un tableau de bord sur Limagrain Vegetable Seeds, HM.CLAUSE et Vilmorin-Mikado", "1234"):
         if event['is_task_complete']:
             print(f"\nFinal event: {event}")
         else:

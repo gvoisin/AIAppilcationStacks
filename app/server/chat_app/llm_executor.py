@@ -18,19 +18,19 @@ from a2a.utils import (
     new_task,
 )
 from a2a.utils.errors import ServerError
-from chat_app.main_llm import OCIOutageEnergyLLM
+from chat_app.main_llm import OCILimagrainLLM
 
 logger = logging.getLogger(__name__)
 
 
 #region Executor
-class OutageEnergyLLMExecutor(AgentExecutor):
-    """Executor for outage and energy chat flows."""
+class LimagrainLLMExecutor(AgentExecutor):
+    """Executor pour les conversations metier LIMAGRAIN Vegetable Seeds."""
 
     #region Lifecycle
     def __init__(self, langfuse_client: Langfuse):
-        self.oci_ui_agent = OCIOutageEnergyLLM(langfuse_client)
-        self.oci_text_agent = OCIOutageEnergyLLM(langfuse_client)
+        self.oci_ui_agent = OCILimagrainLLM(langfuse_client)
+        self.oci_text_agent = OCILimagrainLLM(langfuse_client)
     #endregion
 
     #region Main Execution

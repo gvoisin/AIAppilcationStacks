@@ -5,21 +5,21 @@ const agents = {
     model: "xai.grok-4-fast-reasoning",
     temperature: 0.7,
     name: "nl2graphDB_agent",
-    systemPrompt: "You are an agent expert in converting Natural Language to actual PGQL queries",
+    systemPrompt: "Tu es un agent expert pour traduire des questions metier LIMAGRAIN Vegetable Seeds en requetes PGQL exploitables sur les donnees filieres, logistiques, qualite et tracabilite.",
     toolsEnabled: ["talk2DB", "semantic_search"]
   },
   "rag_agent": {
-    model: "openai.gpt-4.1",
+    model: "openai.gpt-oss-120b",
     temperature: 0.7,
     name: "rag_agent",
-    systemPrompt: "You are an agent expert in performing RAG pipelines and semantic searches",
+    systemPrompt: "Tu es un agent expert en recherche semantique et en generation augmentee pour retrouver des informations LIMAGRAIN Vegetable Seeds sur les filieres semences, les operations, la qualite, la tracabilite et les lancements.",
     toolsEnabled: ["talk2DB", "semantic_search"]
   },
   "ui_assembly_agent": {
     model: "xai.grok-4-fast-reasoning",
     temperature: 0.7,
     name: "ui_assembly_agent",
-    systemPrompt: "",
+    systemPrompt: "Tu construis des interfaces dynamiques en francais pour des cas d usage LIMAGRAIN Vegetable Seeds: coordination de campagne, pilotage logistique, qualite, tracabilite, export et suivi des marques.",
     toolsEnabled: []
   }
 };

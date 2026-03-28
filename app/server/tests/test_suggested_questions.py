@@ -1,20 +1,20 @@
 import asyncio
 
-from chat_app.main_llm import OCIOutageEnergyLLM
+from chat_app.main_llm import OCITerrenaLLM
 from langchain_openai import ChatOpenAI
 from oci_openai import OciUserPrincipalAuth
 import httpx,os
 
 
 
-def build_prompt(llm: OCIOutageEnergyLLM) -> str:
+def build_prompt(llm: OCITerrenaLLM) -> str:
     final_response_content = """
-    Latest outage details:
-    - asset_id: 5057
-    - start_time: 2026-03-18 09:00:00
-    - status: active
-    - region: Denver
-    - customers_affected: 1240
+    Dernieres alertes Terrena :
+    - filiere: volailles
+    - territoire: Vendee
+    - statut: en analyse
+    - impact: 86000 animaux sous protocole renforce
+    - cause: renforcement preventif sanitaire
     """.strip()
 
     return llm._out_query + f"\n\nContext for question generation:\n{final_response_content}"
@@ -40,11 +40,11 @@ def get_suggestion_llm(llm, flag):
 
 
 async def run_async_version(flag):
-    llm = OCIOutageEnergyLLM()
+    llm = OCITerrenaLLM()
     prompt = build_prompt(llm)
 
     print("\n" + "=" * 80)
-    print("RUNNING ASYNC VERSION (ainvoke)")
+    print("EXECUTION ASYNCHRONE (ainvoke)")
     print("=" * 80)
     print("prompt sent to suggestion model:\n")
     print(prompt)
@@ -62,11 +62,11 @@ async def run_async_version(flag):
 
 
 def run_sync_version(flag):
-    llm = OCIOutageEnergyLLM()
+    llm = OCITerrenaLLM()
     prompt = build_prompt(llm)
 
     print("\n" + "=" * 80)
-    print("RUNNING SYNC VERSION (invoke)")
+    print("EXECUTION SYNCHRONE (invoke)")
     print("=" * 80)
     print("prompt sent to suggestion model:\n")
     print(prompt)
@@ -84,11 +84,11 @@ def run_sync_version(flag):
 
 
 async def main():
-    print ("****** OCI OPENAI *******")
+    print ("****** OCI OPENAI TERRENA *******")
     await run_async_version(True)
    # run_sync_version(True)
     
-    print ("****** OCI Native *******")
+    print ("****** OCI NATIVE TERRENA *******")
     
     await run_async_version(False)
     #run_sync_version(False)
