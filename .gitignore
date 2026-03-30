@@ -18,3 +18,4 @@ __pycache__
 scratch/**
 app/server/wallet/**
 logs/**
+app/client/logs/**
